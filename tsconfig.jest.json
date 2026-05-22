@@ -1,0 +1,27 @@
+{
+  "extends" : "./tsconfig.json",
+  "compilerOptions" : {
+    "module" : "CommonJS",
+    "moduleResolution" : "Node",
+    "esModuleInterop" : true,
+    "verbatimModuleSyntax" : false,
+    "lib" : [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types" : [
+      "jest",
+      "node"
+    ],
+    "noEmit" : true
+  },
+  "include" : [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "__mocks__/**/*.ts",
+    "__mocks__/**/*.tsx"
+  ]
+}
+
+
