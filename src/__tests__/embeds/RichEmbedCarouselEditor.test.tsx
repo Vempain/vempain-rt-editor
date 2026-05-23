@@ -6,7 +6,7 @@ import React from 'react';
 import {describe, expect, it, jest} from '@jest/globals';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {RichEmbedCarouselEditor} from '../../embeds/RichEmbedCarouselEditor';
+import {RichEmbedCarouselEditor} from '../../embeds';
 import {renderWithProviders} from '../../test-utils/renderWithProviders';
 import type {CollapseCarouselItem} from '../../tools/embedTools';
 

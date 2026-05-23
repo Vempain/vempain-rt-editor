@@ -21,8 +21,7 @@ export default {
     },
     setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
     testMatch: [
-        '<rootDir>/src/**/__tests__/**/*.[jt]s?(x)',
-        '<rootDir>/src/**/*.(spec|test).[jt]s?(x)',
+        '<rootDir>/src/__tests__/**/*.test.[jt]s?(x)',
     ],
     testPathIgnorePatterns: ['/node_modules/', '/dist/'],
     // Force Jest to exit after all tests finish to avoid dangling scheduler handles
