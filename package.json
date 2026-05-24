@@ -2,7 +2,7 @@
   "name" : "@vempain/vempain-rt-editor",
   "version" : "0.1.0",
   "description" : "Vempain rich text editor component library",
-  "author" : "Paul-Erik Torrönen",
+  "author" : "Paul-Erik Törrönen",
   "license" : "GPL-2.0",
   "type" : "module",
   "packageManager" : "yarn@4.13.0",
