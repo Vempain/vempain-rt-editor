@@ -9,6 +9,14 @@
   },
   "include" : [
     "src"
+  ],
+  "exclude" : [
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-utils/**",
+    "src/setupTests.ts",
+    "src/jest-dom-types.d.ts"
   ]
 }
 

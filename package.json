@@ -19,7 +19,7 @@
     "dist"
   ],
   "scripts" : {
-    "prebuild" : "node generateBuildInfo.cjs",
+    "prebuild" : "node generateBuildInfo.js",
     "build" : "tsc -p tsconfig.build.json",
     "build:production" : "yarn prebuild && tsc -p tsconfig.build.json",
     "clean" : "rm -rf dist",
