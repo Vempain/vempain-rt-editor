@@ -105,7 +105,8 @@ beforeAll(() => {
         if (
             msg.includes('Could not parse CSS stylesheet') ||
             msg.includes('Not implemented:') ||
-            msg.includes('Warning: An update to')  // React batching warnings
+            msg.includes('Warning: An update to') || // React batching warnings
+            (msg.includes('invalid value for the') && msg.includes('css style property'))
         ) {
             return;
         }

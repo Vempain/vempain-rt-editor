@@ -24,8 +24,7 @@ export function RichEmbedGalleryEditor({open, initialId, onConfirm, onCancel}: R
             setLoading(true);
             findGalleries({details: QueryDetailEnum.MINIMAL})
                     .then(setGalleries)
-                    .catch((error) => {
-                        console.error(error);
+                    .catch(() => {
                         setLoadError('Failed to load galleries. Please try again.');
                     })
                     .finally(() => setLoading(false));
@@ -42,7 +41,7 @@ export function RichEmbedGalleryEditor({open, initialId, onConfirm, onCancel}: R
                     destroyOnHidden
             >
                 <Spin spinning={loading}>
-                    {loadError && <Alert type="error" message={loadError} style={{marginBottom: 8}}/>}
+                    {loadError && <Alert type="error" title={loadError} style={{marginBottom: 8}}/>}
                     <Select
                             value={selectedId}
                             onChange={setSelectedId}

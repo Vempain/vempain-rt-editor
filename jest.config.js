@@ -16,6 +16,9 @@ export default {
         '/node_modules/(?!(antd|@ant-design/|rc-|@rc-component/|dompurify))',
     ],
     moduleNameMapper: {
+        // @ant-design/icons/lib color utils hard-require the ESM path below,
+        // which Jest cannot execute in this CJS-based ts-jest setup.
+        '^@ant-design/colors/es/generate$': '<rootDir>/node_modules/@ant-design/colors/lib/generate.js',
         // Replace rc-virtual-list with a simple test double that renders all items
         '^rc-virtual-list$': '<rootDir>/__mocks__/rc-virtual-list.tsx',
     },
@@ -24,9 +27,4 @@ export default {
         '<rootDir>/src/__tests__/**/*.test.[jt]s?(x)',
     ],
     testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-    // Force Jest to exit after all tests finish to avoid dangling scheduler handles
-    // from React 19 + antd's async portal/animation work in jsdom.
-    forceExit: true,
 };
-
-

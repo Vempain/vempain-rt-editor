@@ -360,18 +360,8 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
             const range = sel.getRangeAt(0);
             if (editorRef.current.contains(range.commonAncestorContainer)) {
                 savedRangeRef.current = range.cloneRange();
-                console.debug('[RTE] saveSelection: saved range —',
-                        'startContainer:', range.startContainer.nodeName,
-                        'startOffset:', range.startOffset,
-                        'collapsed:', range.collapsed,
-                        'text around:', JSON.stringify(
-                                (range.startContainer.textContent || '').substring(
-                                        Math.max(0, range.startOffset - 10), range.startOffset + 10)));
                 return;
             }
-            console.debug('[RTE] saveSelection: range is outside editor, not saving');
-        } else {
-            console.debug('[RTE] saveSelection: no selection or no editor ref');
         }
         savedRangeRef.current = null;
     }, []);
@@ -380,7 +370,6 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
         const range = savedRangeRef.current;
         if (range && editorRef.current) {
             if (!editorRef.current.contains(range.startContainer)) {
-                console.debug('[RTE] restoreSelection: startContainer no longer in editor DOM');
                 return false;
             }
             editorRef.current.focus();
@@ -388,19 +377,13 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
             if (sel) {
                 sel.removeAllRanges();
                 sel.addRange(range);
-                console.debug('[RTE] restoreSelection: restored —',
-                        'startContainer:', range.startContainer.nodeName,
-                        'startOffset:', range.startOffset,
-                        'collapsed:', range.collapsed);
                 return true;
             }
         }
-        console.debug('[RTE] restoreSelection: no saved range or no editor ref');
         return false;
     }, []);
 
     const openEmbedDialog = (type: EmbedType) => {
-        console.debug('[RTE] openEmbedDialog: type =', type);
         saveSelection();
         editingPlaceholderRef.current = null;
         setEmbedDialog({open: true, type});
@@ -410,10 +393,8 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
     const insertOrReplacePlaceholder = useCallback((tag: string) => {
         const placeholder = editingPlaceholderRef.current;
         const newHtml = convertTagsToPlaceholders(tag);
-        console.debug('[RTE] insertOrReplacePlaceholder: tag =', tag, 'editing existing?', !!placeholder);
 
         if (placeholder && editorRef.current?.contains(placeholder)) {
-            console.debug('[RTE] replacing existing placeholder in-place');
             placeholder.outerHTML = newHtml;
             handleEditorInput();
         } else {
@@ -422,14 +403,11 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
             // editorRef.current.focus() which moves the cursor to the start
             // of the editor, wiping the selection we just restored.
             const restored = restoreSelection();
-            console.debug('[RTE] selection restored?', restored);
 
             if (restored) {
                 insertHtmlAtSelection(newHtml);
-                console.debug('[RTE] inserted via Range API at restored cursor position');
             } else {
                 // Fallback: append at the end of the editor content
-                console.debug('[RTE] fallback — appending at end of editor');
                 if (editorRef.current) {
                     editorRef.current.insertAdjacentHTML('beforeend', newHtml);
                     handleEditorInput();
