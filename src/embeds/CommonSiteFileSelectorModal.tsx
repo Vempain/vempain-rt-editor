@@ -78,8 +78,7 @@ export function CommonSiteFileSelectorModal({
                 (response.content ?? []).forEach((item) => next.set(item.id, item));
                 return Array.from(next.values());
             });
-        } catch (error) {
-            console.error(error);
+        } catch {
             setLoadError('Failed to load site files. Please try again.');
         } finally {
             if (append) {
@@ -132,7 +131,7 @@ export function CommonSiteFileSelectorModal({
                     destroyOnHidden={true}
             >
                 <Spin spinning={loading}>
-                    {loadError && <Alert type="error" message={loadError} style={{marginBottom: 8}}/>}
+                    {loadError && <Alert type="error" title={loadError} style={{marginBottom: 8}}/>}
                     {selectedLabel && (
                             <div style={{marginBottom: 8}}>
                                 <strong>Selected:</strong> {selectedLabel}

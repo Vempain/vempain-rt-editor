@@ -46,8 +46,7 @@ export function CommonDataSetSelectorModal({
                 search: serverSearchTerm?.trim() || undefined,
             });
             setItems(response);
-        } catch (error) {
-            console.error(error);
+        } catch {
             setLoadError('Failed to load data sets. Please try again.');
         } finally {
             setLoading(false);
@@ -93,7 +92,7 @@ export function CommonDataSetSelectorModal({
                     destroyOnHidden
             >
                 <Spin spinning={loading}>
-                    {loadError && <Alert type="error" message={loadError} style={{marginBottom: 8}}/>}
+                    {loadError && <Alert type="error" title={loadError} style={{marginBottom: 8}}/>}
                     {selectedLabel && (
                             <div style={{marginBottom: 8}}>
                                 <strong>Selected:</strong> {selectedLabel}
