@@ -6,13 +6,15 @@ import {
     convertTagsToPlaceholders,
     type EmbedType,
     type LastEmbedType,
-    parseCarouselParams
+    parseCarouselParams,
+    type WordCloudEmbedOptions
 } from './tools/embedTools';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Button, Form, Input, Modal, Select, Space, Tooltip} from 'antd';
 import {
     BoldOutlined,
     CaretRightOutlined,
+    CloudOutlined,
     CodeOutlined,
     DatabaseOutlined,
     EnvironmentOutlined,
@@ -38,6 +40,7 @@ import {
     RichEmbedLastEditor,
     RichEmbedMusicEditor,
     RichEmbedVideoEditor,
+    RichEmbedWordCloudEditor,
     RichEmbedYoutubeEditor
 } from './embeds';
 import {EmbedDataProvider} from './embeds/EmbedDataContext';
@@ -68,6 +71,8 @@ interface EmbedDialogState {
     /** last embed edits */
     initialLastType?: LastEmbedType;
     initialCount?: number;
+    /** word cloud embed edits */
+    initialWordCloudOptions?: WordCloudEmbedOptions;
 }
 
 /**
@@ -80,7 +85,7 @@ interface EmbedDialogState {
  * - Lists (ordered, unordered)
  * - Link insertion
  * - Table insertion
- * - Embed tag insertion (gallery, image, hero, video, audio, youtube, music, gps_timeseries, last, collapse, carousel)
+ * - Embed tag insertion (gallery, image, hero, video, audio, youtube, music, gps_timeseries, last, word_cloud, collapse, carousel)
  * - Toggle between WYSIWYG and HTML source view
  * - Click-to-edit for existing embed placeholders
  */
@@ -484,6 +489,12 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
         setEmbedDialog({open: false, type: null});
     };
 
+    const handleWordCloudConfirm = (options: WordCloudEmbedOptions) => {
+        const tag = buildEmbedTag({type: 'word_cloud', options});
+        insertOrReplacePlaceholder(tag);
+        setEmbedDialog({open: false, type: null});
+    };
+
     const handleEmbedCancel = () => {
         editingPlaceholderRef.current = null;
         setEmbedDialog({open: false, type: null});
@@ -570,6 +581,23 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
             if (type === 'music' || type === 'gps_timeseries') {
                 editingPlaceholderRef.current = placeholder;
                 setEmbedDialog({open: true, type, initialIdentifier: placeholder.dataset.content || ''});
+                return;
+            }
+
+            if (type === 'word_cloud') {
+                const rawContent = placeholder.dataset.content || '';
+                let parsedOptions: WordCloudEmbedOptions = {};
+                try {
+                    const parsed = JSON.parse(rawContent);
+                    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                        parsedOptions = parsed as WordCloudEmbedOptions;
+                    }
+                } catch {
+                    // ignore malformed JSON
+                }
+
+                editingPlaceholderRef.current = placeholder;
+                setEmbedDialog({open: true, type, initialWordCloudOptions: parsedOptions});
                 return;
             }
 
@@ -789,6 +817,12 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
                                             openEmbedDialog('last');
                                         }}>Last</Button>
                                     </Tooltip>
+                                    <Tooltip title="Insert Word Cloud Embed">
+                                        <Button size="small" style={embedButtonStyle} icon={<CloudOutlined/>} onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            openEmbedDialog('word_cloud');
+                                        }}>Cloud</Button>
+                                    </Tooltip>
                                     <Tooltip title="Insert Collapse Embed">
                                         <Button size="small" style={embedButtonStyle} onMouseDown={(e) => {
                                             e.preventDefault();
@@ -935,6 +969,12 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
                                         initialType={embedDialog.initialLastType}
                                         initialCount={embedDialog.initialCount}
                                         onConfirm={handleLastConfirm}
+                                        onCancel={handleEmbedCancel}
+                                />
+                                <RichEmbedWordCloudEditor
+                                        open={embedDialog.open && embedDialog.type === 'word_cloud'}
+                                        initialOptions={embedDialog.initialWordCloudOptions}
+                                        onConfirm={handleWordCloudConfirm}
                                         onCancel={handleEmbedCancel}
                                 />
                             </>

@@ -9,6 +9,7 @@
  *   <!--vps:embed:audio:%d-->
  *   <!--vps:embed:youtube:%s-->
  *   <!--vps:embed:last:{type}:{count}-->
+ *   <!--vps:embed:word_cloud:<json-options>-->
  *   <!--vps:embed:collapse:<json-array>-->
  *   <!--vps:embed:carousel:<json-array>:autoplay:dotDuration:speed-->
  *
@@ -26,6 +27,7 @@ export type EmbedType =
     | 'music'
     | 'gps_timeseries'
     | 'last'
+    | 'word_cloud'
     | 'collapse'
     | 'carousel';
 
@@ -34,6 +36,10 @@ export type LastEmbedType = 'pages' | 'galleries' | 'images' | 'videos' | 'audio
 export interface CollapseCarouselItem {
     title: string;
     body: string;
+}
+
+export interface WordCloudEmbedOptions {
+    [key: string]: unknown;
 }
 
 /**
@@ -50,6 +56,7 @@ export type EmbedDescriptor =
     | { type: 'music'; identifier: string }
     | { type: 'gps_timeseries'; identifier: string }
     | { type: 'last'; itemType: LastEmbedType; count: number }
+    | { type: 'word_cloud'; options: WordCloudEmbedOptions }
     | { type: 'collapse'; items: CollapseCarouselItem[] }
     | { type: 'carousel'; items: CollapseCarouselItem[]; extra?: string };
 
@@ -64,9 +71,9 @@ export interface CarouselParams {
  * These contain plain values and optional extra params — no newlines or
  * dangerous `-->` sequences in their content.
  */
-const SIMPLE_EMBED_REGEX = /<!--vps:embed:(gallery|image|hero|video|audio|youtube|music|gps_timeseries|last):([\s\S]*?)-->/g;
+const SIMPLE_EMBED_REGEX = /<!--vps:embed:(gallery|image|hero|video|audio|youtube|music|gps_timeseries|last|word_cloud):([\s\S]*?)-->/g;
 
-const CONTENT_EMBED_TYPES = new Set<EmbedType>(['collapse', 'carousel', 'youtube', 'music', 'gps_timeseries', 'last']);
+const CONTENT_EMBED_TYPES = new Set<EmbedType>(['collapse', 'carousel', 'youtube', 'music', 'gps_timeseries', 'last', 'word_cloud']);
 const LAST_TYPES: LastEmbedType[] = ['pages', 'galleries', 'images', 'videos', 'audio', 'documents'];
 
 /**
@@ -280,6 +287,9 @@ export function buildEmbedTag(descriptor: EmbedDescriptor): string {
     if (descriptor.type === 'last') {
         return `<!--vps:embed:last:${descriptor.itemType}:${descriptor.count}-->`;
     }
+    if (descriptor.type === 'word_cloud') {
+        return `<!--vps:embed:word_cloud:${JSON.stringify(sanitizeWordCloudOptions(descriptor.options))}-->`;
+    }
     // gallery, image, hero, video, audio — numeric ID based
     if (descriptor.extra) {
         return `<!--vps:embed:${descriptor.type}:${descriptor.id}:${descriptor.extra}-->`;
@@ -322,6 +332,40 @@ function sanitizeCollapseCarouselItems(items: CollapseCarouselItem[]): CollapseC
         title: stripCommentTags(item.title ?? ''),
         body: stripCommentTags(item.body ?? ''),
     }));
+}
+
+function sanitizeWordCloudOptions(options: WordCloudEmbedOptions): WordCloudEmbedOptions {
+    const sanitized: WordCloudEmbedOptions = {};
+    for (const [key, value] of Object.entries(options)) {
+        if (key === 'data') {
+            continue;
+        }
+        sanitized[key] = sanitizeWordCloudOptionValue(value);
+    }
+    return sanitized;
+}
+
+function sanitizeWordCloudOptionValue(value: unknown): unknown {
+    if (typeof value === 'string') {
+        return stripCommentTags(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => sanitizeWordCloudOptionValue(item));
+    }
+
+    if (typeof value === 'object' && value !== null) {
+        const result: Record<string, unknown> = {};
+        for (const [key, nestedValue] of Object.entries(value)) {
+            if (key === 'data') {
+                continue;
+            }
+            result[key] = sanitizeWordCloudOptionValue(nestedValue);
+        }
+        return result;
+    }
+
+    return value;
 }
 
 /**
@@ -375,6 +419,18 @@ function parseEmbedContent(type: EmbedType, raw: string): EmbedDescriptor {
 
     if (type === 'music' || type === 'gps_timeseries') {
         return {type, identifier: raw.trim()};
+    }
+
+    if (type === 'word_cloud') {
+        try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                return {type, options: sanitizeWordCloudOptions(parsed as WordCloudEmbedOptions)};
+            }
+        } catch {
+            // ignore malformed JSON
+        }
+        return {type, options: {}};
     }
 
     if (type === 'last') {
@@ -502,6 +558,8 @@ function buildPlaceholderLabel(type: EmbedType, content: string): string {
             const safeCount = Number.isFinite(count) && count > 0 ? count : 1;
             return `🧾 last ${safeCount} ${itemType}`;
         }
+        case 'word_cloud':
+            return '☁ word cloud';
         case 'collapse': {
             const trimmed = content.trimStart();
             if (trimmed.startsWith('[')) {

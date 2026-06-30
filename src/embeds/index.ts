@@ -7,6 +7,7 @@ export {RichEmbedVideoEditor} from './RichEmbedVideoEditor';
 export {RichEmbedAudioEditor} from './RichEmbedAudioEditor';
 export {RichEmbedYoutubeEditor} from './RichEmbedYoutubeEditor';
 export {RichEmbedLastEditor} from './RichEmbedLastEditor';
+export {RichEmbedWordCloudEditor} from './RichEmbedWordCloudEditor';
 export {CommonDataSetSelectorModal} from './CommonDataSetSelectorModal';
 export {CommonSiteFileSelectorModal} from './CommonSiteFileSelectorModal';
 export {RichEmbedCollapseEditor} from './RichEmbedCollapseEditor';
