@@ -51,7 +51,7 @@ describe('RichTextEditor', () => {
 
         it('renders all embed insertion buttons', () => {
             renderWithProviders(<RichTextEditor value=""/>);
-            const embedButtons = ['Gallery', 'YouTube', 'Music', 'GPS', 'Last', 'Collapse'];
+            const embedButtons = ['Gallery', 'YouTube', 'Music', 'GPS', 'Last', 'Cloud', 'Collapse'];
             for (const label of embedButtons) {
                 expect(screen.getByRole('button', {name: new RegExp(label, 'i')})).toBeInTheDocument();
             }
@@ -185,6 +185,13 @@ describe('RichTextEditor', () => {
             expect(await screen.findByText('Insert Last Items Embed')).toBeInTheDocument();
         });
 
+        it('opens the Word Cloud dialog when Cloud button is mousedown-clicked', async () => {
+            renderWithProviders(<RichTextEditor value=""/>);
+            const cloudBtn = screen.getByRole('button', {name: /cloud/i});
+            fireEvent.mouseDown(cloudBtn);
+            expect(await screen.findByText('Insert Word Cloud Embed')).toBeInTheDocument();
+        });
+
         it('opens the Collapse dialog when Collapse button is mousedown-clicked', async () => {
             renderWithProviders(<RichTextEditor value=""/>);
             const collapseBtn = screen.getByRole('button', {name: /collapse/i});
@@ -245,6 +252,14 @@ describe('RichTextEditor', () => {
             await userEvent.click(placeholder);
             expect(await screen.findByText('Insert Gallery Embed')).toBeInTheDocument();
         });
+
+        it('opens the Word Cloud editor when a word_cloud placeholder is clicked', async () => {
+            const value = '<!--vps:embed:word_cloud:{"shape":"circle"}-->';
+            renderWithProviders(<RichTextEditor value={value}/>);
+            const placeholder = await screen.findByText(/word cloud/i);
+            await userEvent.click(placeholder);
+            expect(await screen.findByText('Insert Word Cloud Embed')).toBeInTheDocument();
+        });
     });
 
     // -----------------------------------------------------------------------
@@ -264,4 +279,3 @@ describe('RichTextEditor', () => {
         });
     });
 });
-

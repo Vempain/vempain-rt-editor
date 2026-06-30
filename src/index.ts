@@ -17,6 +17,7 @@ export type {
     EmbedDescriptor,
     EmbedType,
     LastEmbedType,
+    WordCloudEmbedOptions,
 } from './tools/embedTools';
 
 export type {

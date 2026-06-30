@@ -94,6 +94,11 @@ describe('buildEmbedTag', () => {
             .toBe('<!--vps:embed:last:documents:8-->');
     });
 
+    it('builds a word cloud embed tag', () => {
+        expect(buildEmbedTag({type: 'word_cloud', options: {shape: 'circle', fontSize: [10, 40]}}))
+            .toBe('<!--vps:embed:word_cloud:{"shape":"circle","fontSize":[10,40]}-->');
+    });
+
     it('builds a collapse embed tag', () => {
         const items: CollapseCarouselItem[] = [
             {title: 'Section A', body: 'Content A'},
@@ -239,6 +244,12 @@ describe('parseEmbeds', () => {
         expect(d.count).toBe(10);
     });
 
+    it('parses a word cloud embed', () => {
+        const result = parseEmbeds('<!--vps:embed:word_cloud:{"shape":"diamond","fontSize":[12,60]}-->');
+        const d = (result[0] as Extract<ContentSegment, { kind: 'embed' }>).descriptor as Extract<EmbedDescriptor, { type: 'word_cloud' }>;
+        expect(d.options).toEqual({shape: 'diamond', fontSize: [12, 60]});
+    });
+
     it('defaults invalid last type to pages', () => {
         const result = parseEmbeds('<!--vps:embed:last:unknown:5-->');
         const d = (result[0] as Extract<ContentSegment, { kind: 'embed' }>).descriptor as Extract<EmbedDescriptor, { type: 'last' }>;
@@ -360,6 +371,11 @@ describe('convertTagsToPlaceholders and convertPlaceholdersToTags', () => {
         expect(roundTrip(tag)).toBe(tag);
     });
 
+    it('round-trips a word cloud embed', () => {
+        const tag = '<!--vps:embed:word_cloud:{"shape":"circle","fontSize":[12,56]}-->';
+        expect(roundTrip(tag)).toBe(tag);
+    });
+
     it('round-trips a collapse embed', () => {
         const items: CollapseCarouselItem[] = [{title: 'T', body: 'B'}];
         const tag = `<!--vps:embed:collapse:${JSON.stringify(items)}-->`;
@@ -428,6 +444,12 @@ describe('convertTagsToPlaceholders and convertPlaceholdersToTags', () => {
         const tag = '<!--vps:embed:gps_timeseries:gps_route_eu-->';
         const placeholder = convertTagsToPlaceholders(tag);
         expect(placeholder).toContain('gps:gps_route_eu');
+    });
+
+    it('produces placeholder label for word cloud', () => {
+        const tag = '<!--vps:embed:word_cloud:{"shape":"circle"}-->';
+        const placeholder = convertTagsToPlaceholders(tag);
+        expect(placeholder).toContain('word cloud');
     });
 });
 
@@ -506,6 +528,12 @@ describe('buildEmbedTag → parseEmbeds full round-trip', () => {
         expect(desc.count).toBe(4);
     });
 
+    it('word cloud round-trip', () => {
+        const tag = buildEmbedTag({type: 'word_cloud', options: {shape: 'diamond', spiral: 'rectangular'}});
+        const desc = firstDescriptor(tag) as Extract<EmbedDescriptor, { type: 'word_cloud' }>;
+        expect(desc.options).toEqual({shape: 'diamond', spiral: 'rectangular'});
+    });
+
     it('collapse round-trip preserves items', () => {
         const items: CollapseCarouselItem[] = [
             {title: 'FAQ 1', body: 'Answer 1'},
@@ -529,4 +557,3 @@ describe('buildEmbedTag → parseEmbeds full round-trip', () => {
         expect(tag2).toBe(tag);
     });
 });
-
