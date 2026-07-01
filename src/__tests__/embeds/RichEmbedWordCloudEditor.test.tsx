@@ -13,12 +13,18 @@ describe('RichEmbedWordCloudEditor', () => {
         expect(screen.getByText('Insert Word Cloud Embed')).toBeInTheDocument();
     });
 
-    it('calls onConfirm with parsed JSON options', async () => {
+    it('calls onConfirm with structured options', async () => {
         const onConfirm = jest.fn();
         renderWithProviders(
                 <RichEmbedWordCloudEditor
                         open={true}
-                        initialOptions={{shape: 'diamond', fontSize: [12, 48]}}
+                        initialOptions={{
+                            width: 640,
+                            height: 360,
+                            shape: 'diamond',
+                            layout: {fontSize: [12, 48], spiral: 'archimedean', padding: 2},
+                            style: {fill: '#1677ff'},
+                        }}
                         onConfirm={onConfirm}
                         onCancel={jest.fn()}
                 />,
@@ -26,19 +32,32 @@ describe('RichEmbedWordCloudEditor', () => {
 
         await userEvent.click(screen.getByRole('button', {name: /ok/i}));
         await waitFor(() => {
-            expect(onConfirm).toHaveBeenCalledWith({shape: 'diamond', fontSize: [12, 48]});
+            expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({
+                width: 640,
+                height: 360,
+                shape: 'diamond',
+                fontSize: [12, 48],
+                spiral: 'archimedean',
+                padding: 2,
+                layout: expect.objectContaining({
+                    fontSize: [12, 48],
+                    spiral: 'archimedean',
+                    padding: 2,
+                    size: [640, 360],
+                }),
+                style: {fill: '#1677ff'},
+            }));
         });
     });
 
-    it('rejects options that include data', async () => {
+    it('rejects invalid style JSON', async () => {
         renderWithProviders(
                 <RichEmbedWordCloudEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
         );
 
-        const input = screen.getByLabelText('Word cloud options JSON');
-        const invalidOptions = '{"shape":"circle","data":[{"text":"x","value":1}]}';
-        fireEvent.change(input, {target: {value: invalidOptions}});
+        const input = screen.getByLabelText('Style JSON');
+        fireEvent.change(input, {target: {value: 'not-json'}});
         await userEvent.click(screen.getByRole('button', {name: /ok/i}));
-        expect(await screen.findByText('Do not include data in options')).toBeInTheDocument();
+        expect(await screen.findByText('Invalid JSON')).toBeInTheDocument();
     });
 });

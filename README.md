@@ -41,13 +41,14 @@ npx eslint .
 ## Word cloud embed usage
 
 1. In the toolbar, click **Cloud**.
-2. Configure WordCloud options as JSON (without `data`).
-3. Save the embed.
+2. Configure WordCloud options with dedicated form fields (including explicit `width`/`height` in pixels and separate layout settings).
+3. Use JSON only for the optional `style` field.
+4. Save the embed.
 
 Example stored tag:
 
 ```html
-<!--vps:embed:word_cloud:{"shape":"circle","fontSize":[14,56],"spiral":"rectangular","padding":1}-->
+<!--vps:embed:word_cloud:{"width":800,"height":500,"shape":"circle","layout":{"fontSize":[14,56],"spiral":"rectangular","padding":1,"size":[800,500]},"fontSize":[14,56],"spiral":"rectangular","padding":1}-->
 ```
 
 The website backend injects the `data` array at page request time, so editors should not include it manually.
