@@ -99,6 +99,11 @@ describe('buildEmbedTag', () => {
             .toBe('<!--vps:embed:word_cloud:{"shape":"circle","fontSize":[10,40]}-->');
     });
 
+    it('builds a today random embed tag', () => {
+        expect(buildEmbedTag({type: 'today_random', options: {title: 'On this day', columns: 3}}))
+            .toBe('<!--vps:embed:today_random:{"title":"On this day","columns":3}-->');
+    });
+
     it('builds a collapse embed tag', () => {
         const items: CollapseCarouselItem[] = [
             {title: 'Section A', body: 'Content A'},
@@ -250,6 +255,12 @@ describe('parseEmbeds', () => {
         expect(d.options).toEqual({shape: 'diamond', fontSize: [12, 60]});
     });
 
+    it('parses a today random embed', () => {
+        const result = parseEmbeds('<!--vps:embed:today_random:{"title":"On this day","columns":2}-->');
+        const d = (result[0] as Extract<ContentSegment, { kind: 'embed' }>).descriptor as Extract<EmbedDescriptor, { type: 'today_random' }>;
+        expect(d.options).toEqual({title: 'On this day', columns: 2});
+    });
+
     it('defaults invalid last type to pages', () => {
         const result = parseEmbeds('<!--vps:embed:last:unknown:5-->');
         const d = (result[0] as Extract<ContentSegment, { kind: 'embed' }>).descriptor as Extract<EmbedDescriptor, { type: 'last' }>;
@@ -376,6 +387,11 @@ describe('convertTagsToPlaceholders and convertPlaceholdersToTags', () => {
         expect(roundTrip(tag)).toBe(tag);
     });
 
+    it('round-trips a today random embed', () => {
+        const tag = '<!--vps:embed:today_random:{"title":"On this day","columns":2}-->';
+        expect(roundTrip(tag)).toBe(tag);
+    });
+
     it('round-trips a collapse embed', () => {
         const items: CollapseCarouselItem[] = [{title: 'T', body: 'B'}];
         const tag = `<!--vps:embed:collapse:${JSON.stringify(items)}-->`;
@@ -450,6 +466,12 @@ describe('convertTagsToPlaceholders and convertPlaceholdersToTags', () => {
         const tag = '<!--vps:embed:word_cloud:{"shape":"circle"}-->';
         const placeholder = convertTagsToPlaceholders(tag);
         expect(placeholder).toContain('word cloud');
+    });
+
+    it('produces placeholder label for today random', () => {
+        const tag = '<!--vps:embed:today_random:{"title":"On this day"}-->';
+        const placeholder = convertTagsToPlaceholders(tag);
+        expect(placeholder).toContain('today random');
     });
 });
 
@@ -532,6 +554,12 @@ describe('buildEmbedTag → parseEmbeds full round-trip', () => {
         const tag = buildEmbedTag({type: 'word_cloud', options: {shape: 'diamond', spiral: 'rectangular'}});
         const desc = firstDescriptor(tag) as Extract<EmbedDescriptor, { type: 'word_cloud' }>;
         expect(desc.options).toEqual({shape: 'diamond', spiral: 'rectangular'});
+    });
+
+    it('today random round-trip', () => {
+        const tag = buildEmbedTag({type: 'today_random', options: {title: 'On this day'}});
+        const desc = firstDescriptor(tag) as Extract<EmbedDescriptor, { type: 'today_random' }>;
+        expect(desc.options).toEqual({title: 'On this day'});
     });
 
     it('collapse round-trip preserves items', () => {

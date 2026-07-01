@@ -10,6 +10,7 @@
  *   <!--vps:embed:youtube:%s-->
  *   <!--vps:embed:last:{type}:{count}-->
  *   <!--vps:embed:word_cloud:<json-options>-->
+ *   <!--vps:embed:today_random:<json-options>-->
  *   <!--vps:embed:collapse:<json-array>-->
  *   <!--vps:embed:carousel:<json-array>:autoplay:dotDuration:speed-->
  *
@@ -28,6 +29,7 @@ export type EmbedType =
     | 'gps_timeseries'
     | 'last'
     | 'word_cloud'
+    | 'today_random'
     | 'collapse'
     | 'carousel';
 
@@ -39,6 +41,10 @@ export interface CollapseCarouselItem {
 }
 
 export interface WordCloudEmbedOptions {
+    [key: string]: unknown;
+}
+
+export interface TodayRandomEmbedOptions {
     [key: string]: unknown;
 }
 
@@ -57,6 +63,7 @@ export type EmbedDescriptor =
     | { type: 'gps_timeseries'; identifier: string }
     | { type: 'last'; itemType: LastEmbedType; count: number }
     | { type: 'word_cloud'; options: WordCloudEmbedOptions }
+    | { type: 'today_random'; options: TodayRandomEmbedOptions }
     | { type: 'collapse'; items: CollapseCarouselItem[] }
     | { type: 'carousel'; items: CollapseCarouselItem[]; extra?: string };
 
@@ -71,9 +78,9 @@ export interface CarouselParams {
  * These contain plain values and optional extra params — no newlines or
  * dangerous `-->` sequences in their content.
  */
-const SIMPLE_EMBED_REGEX = /<!--vps:embed:(gallery|image|hero|video|audio|youtube|music|gps_timeseries|last|word_cloud):([\s\S]*?)-->/g;
+const SIMPLE_EMBED_REGEX = /<!--vps:embed:(gallery|image|hero|video|audio|youtube|music|gps_timeseries|last|word_cloud|today_random):([\s\S]*?)-->/g;
 
-const CONTENT_EMBED_TYPES = new Set<EmbedType>(['collapse', 'carousel', 'youtube', 'music', 'gps_timeseries', 'last', 'word_cloud']);
+const CONTENT_EMBED_TYPES = new Set<EmbedType>(['collapse', 'carousel', 'youtube', 'music', 'gps_timeseries', 'last', 'word_cloud', 'today_random']);
 const LAST_TYPES: LastEmbedType[] = ['pages', 'galleries', 'images', 'videos', 'audio', 'documents'];
 
 /**
@@ -290,6 +297,9 @@ export function buildEmbedTag(descriptor: EmbedDescriptor): string {
     if (descriptor.type === 'word_cloud') {
         return `<!--vps:embed:word_cloud:${JSON.stringify(sanitizeWordCloudOptions(descriptor.options))}-->`;
     }
+    if (descriptor.type === 'today_random') {
+        return `<!--vps:embed:today_random:${JSON.stringify(sanitizeTodayRandomOptions(descriptor.options))}-->`;
+    }
     // gallery, image, hero, video, audio — numeric ID based
     if (descriptor.extra) {
         return `<!--vps:embed:${descriptor.type}:${descriptor.id}:${descriptor.extra}-->`;
@@ -368,6 +378,40 @@ function sanitizeWordCloudOptionValue(value: unknown): unknown {
     return value;
 }
 
+function sanitizeTodayRandomOptions(options: TodayRandomEmbedOptions): TodayRandomEmbedOptions {
+    const sanitized: TodayRandomEmbedOptions = {};
+    for (const [key, value] of Object.entries(options)) {
+        if (key === 'images' || key === 'pages') {
+            continue;
+        }
+        sanitized[key] = sanitizeTodayRandomOptionValue(value);
+    }
+    return sanitized;
+}
+
+function sanitizeTodayRandomOptionValue(value: unknown): unknown {
+    if (typeof value === 'string') {
+        return stripCommentTags(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => sanitizeTodayRandomOptionValue(item));
+    }
+
+    if (typeof value === 'object' && value !== null) {
+        const result: Record<string, unknown> = {};
+        for (const [key, nestedValue] of Object.entries(value)) {
+            if (key === 'images' || key === 'pages') {
+                continue;
+            }
+            result[key] = sanitizeTodayRandomOptionValue(nestedValue);
+        }
+        return result;
+    }
+
+    return value;
+}
+
 /**
  * Parse the raw content string (everything after the type colon) into an EmbedDescriptor.
  * Supports:
@@ -426,6 +470,18 @@ function parseEmbedContent(type: EmbedType, raw: string): EmbedDescriptor {
             const parsed = JSON.parse(raw);
             if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
                 return {type, options: sanitizeWordCloudOptions(parsed as WordCloudEmbedOptions)};
+            }
+        } catch {
+            // ignore malformed JSON
+        }
+        return {type, options: {}};
+    }
+
+    if (type === 'today_random') {
+        try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                return {type, options: sanitizeTodayRandomOptions(parsed as TodayRandomEmbedOptions)};
             }
         } catch {
             // ignore malformed JSON
@@ -560,6 +616,8 @@ function buildPlaceholderLabel(type: EmbedType, content: string): string {
         }
         case 'word_cloud':
             return '☁ word cloud';
+        case 'today_random':
+            return '📅 today random';
         case 'collapse': {
             const trimmed = content.trimStart();
             if (trimmed.startsWith('[')) {
