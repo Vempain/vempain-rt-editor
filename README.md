@@ -5,7 +5,7 @@ React component library for Vempain rich text editing.
 ## What this package contains
 
 - `RichTextEditor` extracted from `vempain-admin-frontend`
-- Full embed editor suite (gallery/image/hero/video/audio/youtube/music/gps/last/word-cloud/collapse/carousel)
+- Full embed editor suite (gallery/image/hero/video/audio/youtube/music/gps/last/word-cloud/today-random/collapse/carousel)
 - Embed tag parsing/building helpers from `embedTools`
 
 ## Provider-based integration
@@ -51,3 +51,17 @@ Example stored tag:
 ```
 
 The website backend injects the `data` array at page request time, so editors should not include it manually.
+
+## Today random embed usage
+
+1. In the toolbar, click **Today**.
+2. Configure embed options as JSON (without `images` or `pages`).
+3. Save the embed.
+
+Example stored tag:
+
+```html
+<!--vps:embed:today_random:{"title":"On this day"}-->
+```
+
+The website backend injects the `images` and `pages` arrays at page request time.

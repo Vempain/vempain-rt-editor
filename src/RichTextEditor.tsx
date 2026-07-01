@@ -7,12 +7,14 @@ import {
     type EmbedType,
     type LastEmbedType,
     parseCarouselParams,
+    type TodayRandomEmbedOptions,
     type WordCloudEmbedOptions
 } from './tools/embedTools';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Button, Form, Input, Modal, Select, Space, Tooltip} from 'antd';
 import {
     BoldOutlined,
+    CalendarOutlined,
     CaretRightOutlined,
     CloudOutlined,
     CodeOutlined,
@@ -39,6 +41,7 @@ import {
     RichEmbedImageEditor,
     RichEmbedLastEditor,
     RichEmbedMusicEditor,
+    RichEmbedTodayRandomEditor,
     RichEmbedVideoEditor,
     RichEmbedWordCloudEditor,
     RichEmbedYoutubeEditor
@@ -73,6 +76,8 @@ interface EmbedDialogState {
     initialCount?: number;
     /** word cloud embed edits */
     initialWordCloudOptions?: WordCloudEmbedOptions;
+    /** today-random embed edits */
+    initialTodayRandomOptions?: TodayRandomEmbedOptions;
 }
 
 /**
@@ -85,7 +90,7 @@ interface EmbedDialogState {
  * - Lists (ordered, unordered)
  * - Link insertion
  * - Table insertion
- * - Embed tag insertion (gallery, image, hero, video, audio, youtube, music, gps_timeseries, last, word_cloud, collapse, carousel)
+ * - Embed tag insertion (gallery, image, hero, video, audio, youtube, music, gps_timeseries, last, word_cloud, today_random, collapse, carousel)
  * - Toggle between WYSIWYG and HTML source view
  * - Click-to-edit for existing embed placeholders
  */
@@ -495,6 +500,12 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
         setEmbedDialog({open: false, type: null});
     };
 
+    const handleTodayRandomConfirm = (options: TodayRandomEmbedOptions) => {
+        const tag = buildEmbedTag({type: 'today_random', options});
+        insertOrReplacePlaceholder(tag);
+        setEmbedDialog({open: false, type: null});
+    };
+
     const handleEmbedCancel = () => {
         editingPlaceholderRef.current = null;
         setEmbedDialog({open: false, type: null});
@@ -598,6 +609,23 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
 
                 editingPlaceholderRef.current = placeholder;
                 setEmbedDialog({open: true, type, initialWordCloudOptions: parsedOptions});
+                return;
+            }
+
+            if (type === 'today_random') {
+                const rawContent = placeholder.dataset.content || '';
+                let parsedOptions: TodayRandomEmbedOptions = {};
+                try {
+                    const parsed = JSON.parse(rawContent);
+                    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                        parsedOptions = parsed as TodayRandomEmbedOptions;
+                    }
+                } catch {
+                    // ignore malformed JSON
+                }
+
+                editingPlaceholderRef.current = placeholder;
+                setEmbedDialog({open: true, type, initialTodayRandomOptions: parsedOptions});
                 return;
             }
 
@@ -823,6 +851,12 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
                                             openEmbedDialog('word_cloud');
                                         }}>Cloud</Button>
                                     </Tooltip>
+                                    <Tooltip title="Insert Today Random Embed">
+                                        <Button size="small" style={embedButtonStyle} icon={<CalendarOutlined/>} onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            openEmbedDialog('today_random');
+                                        }}>Today</Button>
+                                    </Tooltip>
                                     <Tooltip title="Insert Collapse Embed">
                                         <Button size="small" style={embedButtonStyle} onMouseDown={(e) => {
                                             e.preventDefault();
@@ -975,6 +1009,12 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
                                         open={embedDialog.open && embedDialog.type === 'word_cloud'}
                                         initialOptions={embedDialog.initialWordCloudOptions}
                                         onConfirm={handleWordCloudConfirm}
+                                        onCancel={handleEmbedCancel}
+                                />
+                                <RichEmbedTodayRandomEditor
+                                        open={embedDialog.open && embedDialog.type === 'today_random'}
+                                        initialOptions={embedDialog.initialTodayRandomOptions}
+                                        onConfirm={handleTodayRandomConfirm}
                                         onCancel={handleEmbedCancel}
                                 />
                             </>

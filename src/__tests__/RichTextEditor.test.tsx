@@ -51,7 +51,7 @@ describe('RichTextEditor', () => {
 
         it('renders all embed insertion buttons', () => {
             renderWithProviders(<RichTextEditor value=""/>);
-            const embedButtons = ['Gallery', 'YouTube', 'Music', 'GPS', 'Last', 'Cloud', 'Collapse'];
+            const embedButtons = ['Gallery', 'YouTube', 'Music', 'GPS', 'Last', 'Cloud', 'Today', 'Collapse'];
             for (const label of embedButtons) {
                 expect(screen.getByRole('button', {name: new RegExp(label, 'i')})).toBeInTheDocument();
             }
@@ -192,6 +192,13 @@ describe('RichTextEditor', () => {
             expect(await screen.findByText('Insert Word Cloud Embed')).toBeInTheDocument();
         });
 
+        it('opens the Today Random dialog when Today button is mousedown-clicked', async () => {
+            renderWithProviders(<RichTextEditor value=""/>);
+            const todayBtn = screen.getByRole('button', {name: /today/i});
+            fireEvent.mouseDown(todayBtn);
+            expect(await screen.findByText('Insert Today Random Embed')).toBeInTheDocument();
+        });
+
         it('opens the Collapse dialog when Collapse button is mousedown-clicked', async () => {
             renderWithProviders(<RichTextEditor value=""/>);
             const collapseBtn = screen.getByRole('button', {name: /collapse/i});
@@ -259,6 +266,14 @@ describe('RichTextEditor', () => {
             const placeholder = await screen.findByText(/word cloud/i);
             await userEvent.click(placeholder);
             expect(await screen.findByText('Insert Word Cloud Embed')).toBeInTheDocument();
+        });
+
+        it('opens the Today Random editor when a today_random placeholder is clicked', async () => {
+            const value = '<!--vps:embed:today_random:{"title":"On this day"}-->';
+            renderWithProviders(<RichTextEditor value={value}/>);
+            const placeholder = await screen.findByText(/today random/i);
+            await userEvent.click(placeholder);
+            expect(await screen.findByText('Insert Today Random Embed')).toBeInTheDocument();
         });
     });
 
