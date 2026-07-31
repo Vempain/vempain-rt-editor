@@ -5,6 +5,7 @@
 - Package: `@vempain/vempain-rt-editor` (React 19 + TypeScript library, ESM output) (`package.json`).
 - Main public surface is `RichTextEditor` + embed utilities/types re-exported from `src/index.ts`.
 - This repo is a library, not an app: embed data comes from host-provided callbacks, never from internal API clients.
+- Public usage docs are mirrored in `vempain-site`; keep the editor props, exported helpers, and provider contract aligned with those docs.
 
 ## Architecture and Data Flow
 
@@ -51,4 +52,3 @@
 - `build:production` references `generateBuildInfo.cjs`, while repository contains `generateBuildInfo.js`; verify release script expectations before changing
   build/version flow.
 - Package publishes only `dist/` artifacts (`package.json` `files` and `exports`).
-
