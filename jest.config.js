@@ -4,6 +4,7 @@ export default {
     transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {
             tsconfig: 'tsconfig.jest.json',
+            compiler: '@typescript/typescript6',
             // Disable TypeScript diagnostic errors in tests.
             // The @testing-library/jest-dom augmentation is applied at runtime via
             // setupFilesAfterEnv; disabling diagnostics prevents ts-jest from
