@@ -84,7 +84,7 @@ describe('CommonSiteFileSelectorModal', () => {
             const calls = (providers.getPagedSiteFiles as jest.Mock).mock.calls as [Record<string, unknown>][];
             expect(calls.length).toBeGreaterThan(1);
             const lastCall = calls[calls.length - 1][0];
-            expect(lastCall.filter).toBe('photo');
+            expect(lastCall.search).toBe('photo');
         });
     });
 
@@ -239,7 +239,6 @@ describe('RichEmbedAudioEditor', () => {
         });
     });
 });
-
 
 
 

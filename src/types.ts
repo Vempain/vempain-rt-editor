@@ -47,6 +47,16 @@ export interface PagedResponse<T> {
     total_pages: number;
 }
 
+export interface SiteFileQueryParams {
+    page: number;
+    size: number;
+    sort_by?: string;
+    direction?: 'ASC' | 'DESC';
+    search?: string;
+    file_type: FileTypeEnum;
+    filter_column?: string;
+}
+
 export interface DataSetQueryParams {
     type?: string;
     identifier_prefix?: string;
@@ -55,7 +65,6 @@ export interface DataSetQueryParams {
 
 export interface EmbedDataProviders {
     findGalleries: (params: { details: QueryDetailEnum }) => Promise<GalleryVO[]>;
-    getPagedSiteFiles: (params: Record<string, string | number | boolean | undefined>) => Promise<PagedResponse<SiteFileResponse>>;
+    getPagedSiteFiles: (params: SiteFileQueryParams) => Promise<PagedResponse<SiteFileResponse>>;
     getAllDataSets: (params?: DataSetQueryParams) => Promise<DataSummaryResponse[]>;
 }
-
