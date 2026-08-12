@@ -5,9 +5,9 @@ import {useEmbedDataProviders} from './EmbedDataContext';
 import type {FileTypeEnum, SiteFileResponse} from '../types';
 
 const PAGE_SIZE = 50;
-const FILTER_COLUMN = 'fileName';
-const SORT_BY = 'fileName';
-const SORT_DIRECTION = 'ASC';
+const FILTER_COLUMN = 'file_name';
+const SORT_BY = 'file_name';
+const SORT_DIRECTION = 'ASC' as const;
 const LIST_HEIGHT = 320;
 const ITEM_HEIGHT = 36;
 
@@ -61,13 +61,13 @@ export function CommonSiteFileSelectorModal({
 
         try {
             const trimmed = query.trim();
-            const params: Record<string, string | number> = {
-                page_size: PAGE_SIZE,
-                page_number: pageNumber,
+            const params = {
+                page: pageNumber,
+                size: PAGE_SIZE,
                 file_type: fileType,
                 sort_by: SORT_BY,
                 direction: SORT_DIRECTION,
-                filter: trimmed,
+                search: trimmed,
                 filter_column: FILTER_COLUMN,
             };
             const response = await getPagedSiteFiles(params);

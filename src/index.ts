@@ -27,6 +27,7 @@ export type {
     EmbedDataProviders,
     GalleryVO,
     PagedResponse,
+    SiteFileQueryParams,
     SiteFileResponse,
 } from './types';
 
