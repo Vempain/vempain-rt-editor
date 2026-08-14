@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {type ReactNode, useEffect, useState} from 'react';
 import {Alert, Modal, Select, Spin} from 'antd';
 import {type GalleryVO, QueryDetailEnum} from '../types';
 import {useEmbedDataProviders} from './EmbedDataContext';
@@ -8,9 +8,10 @@ interface RichEmbedGalleryEditorProps {
     initialId?: number;
     onConfirm: (id: number) => void;
     onCancel: () => void;
+    extraContent?: ReactNode;
 }
 
-export function RichEmbedGalleryEditor({open, initialId, onConfirm, onCancel}: RichEmbedGalleryEditorProps) {
+export function RichEmbedGalleryEditor({open, initialId, onConfirm, onCancel, extraContent}: RichEmbedGalleryEditorProps) {
     const {findGalleries} = useEmbedDataProviders();
     const [galleries, setGalleries] = useState<GalleryVO[]>([]);
     const [loading, setLoading] = useState(false);
@@ -42,6 +43,7 @@ export function RichEmbedGalleryEditor({open, initialId, onConfirm, onCancel}: R
             >
                 <Spin spinning={loading}>
                     {loadError && <Alert type="error" title={loadError} style={{marginBottom: 8}}/>}
+                    {extraContent}
                     <Select
                             value={selectedId}
                             onChange={setSelectedId}

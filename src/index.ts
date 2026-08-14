@@ -29,6 +29,7 @@ export type {
     PagedResponse,
     SiteFileQueryParams,
     SiteFileResponse,
+    HeroEmbedType,
 } from './types';
 
 export {FileTypeEnum, QueryDetailEnum} from './types';

@@ -204,6 +204,26 @@ describe('RichEmbedHeroEditor', () => {
         renderWithProviders(<RichEmbedHeroEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>);
         expect(await screen.findByText('Insert Hero Image Embed')).toBeInTheDocument();
     });
+
+    it('offers image, video, and carousel choices and queries videos when selected', async () => {
+        const {providers} = renderWithProviders(
+                <RichEmbedHeroEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
+        );
+        await userEvent.click(screen.getByRole('radio', {name: 'Video'}));
+        await waitFor(() => {
+            const calls = (providers.getPagedSiteFiles as jest.Mock).mock.calls as [Record<string, unknown>][];
+            expect(calls.at(-1)?.[0].file_type).toBe(FileTypeEnum.VIDEO);
+        });
+        expect(screen.getByRole('radio', {name: 'Carousel'})).toBeInTheDocument();
+    });
+
+    it('confirms the selected image with its hero type', async () => {
+        const onConfirm = jest.fn();
+        renderWithProviders(<RichEmbedHeroEditor open={true} onConfirm={onConfirm} onCancel={jest.fn()}/>);
+        await userEvent.click(await screen.findByText('photo-01.jpg'));
+        await userEvent.click(screen.getByRole('button', {name: 'OK'}));
+        expect(onConfirm).toHaveBeenCalledWith(10, 'image');
+    });
 });
 
 describe('RichEmbedVideoEditor', () => {
@@ -239,6 +259,4 @@ describe('RichEmbedAudioEditor', () => {
         });
     });
 });
-
-
 

@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {type ReactNode, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Input, Modal, Spin} from 'antd';
 import VirtualList from 'rc-virtual-list';
 import {useEmbedDataProviders} from './EmbedDataContext';
@@ -18,6 +18,7 @@ interface CommonSiteFileSelectorModalProps {
     initialId?: number;
     searchPlaceholder: string;
     emptyText: string;
+    extraContent?: ReactNode;
     onConfirm: (id: number) => void;
     onCancel: () => void;
 }
@@ -29,6 +30,7 @@ export function CommonSiteFileSelectorModal({
                                                 initialId,
                                                 searchPlaceholder,
                                                 emptyText,
+                                                extraContent,
                                                 onConfirm,
                                                 onCancel,
                                             }: CommonSiteFileSelectorModalProps) {
@@ -132,6 +134,7 @@ export function CommonSiteFileSelectorModal({
             >
                 <Spin spinning={loading}>
                     {loadError && <Alert type="error" title={loadError} style={{marginBottom: 8}}/>}
+                    {extraContent}
                     {selectedLabel && (
                             <div style={{marginBottom: 8}}>
                                 <strong>Selected:</strong> {selectedLabel}
