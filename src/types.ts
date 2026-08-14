@@ -25,6 +25,14 @@ export const QueryDetailEnum = {
 
 export type QueryDetailEnum = (typeof QueryDetailEnum)[keyof typeof QueryDetailEnum];
 
+export const HeroEmbedType = {
+    IMAGE: 'image',
+    VIDEO: 'video',
+    CAROUSEL: 'carousel',
+} as const;
+
+export type HeroEmbedType = (typeof HeroEmbedType)[keyof typeof HeroEmbedType];
+
 export interface GalleryVO {
     id: number;
     short_name: string;

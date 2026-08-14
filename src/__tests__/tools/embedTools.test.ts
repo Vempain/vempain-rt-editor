@@ -28,7 +28,7 @@ describe('buildEmbedTag', () => {
     });
 
     it('builds a hero embed tag', () => {
-        expect(buildEmbedTag({type: 'hero', id: 5})).toBe('<!--vps:embed:hero:5-->');
+        expect(buildEmbedTag({type: 'hero', id: 5, heroType: 'image'})).toBe('<!--vps:embed:hero:5:type:image-->');
     });
 
     it('builds a video embed tag', () => {
@@ -209,6 +209,7 @@ describe('parseEmbeds', () => {
         const d = (result[0] as Extract<ContentSegment, { kind: 'embed' }>).descriptor as Extract<EmbedDescriptor, { type: 'hero' }>;
         expect(d.type).toBe('hero');
         expect(d.id).toBe(12);
+        expect(d.heroType).toBe('image');
     });
 
     it('parses a video embed', () => {
@@ -507,9 +508,10 @@ describe('buildEmbedTag → parseEmbeds full round-trip', () => {
     });
 
     it('hero round-trip', () => {
-        const tag = buildEmbedTag({type: 'hero', id: 1});
+        const tag = buildEmbedTag({type: 'hero', id: 1, heroType: 'carousel'});
         const desc = firstDescriptor(tag) as Extract<EmbedDescriptor, { type: 'hero' }>;
         expect(desc.id).toBe(1);
+        expect(desc.heroType).toBe('carousel');
     });
 
     it('video round-trip', () => {

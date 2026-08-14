@@ -47,7 +47,11 @@ import {
     RichEmbedYoutubeEditor
 } from './embeds';
 import {EmbedDataProvider} from './embeds/EmbedDataContext';
-import type {EmbedDataProviders} from './types';
+import type {EmbedDataProviders, HeroEmbedType} from './types';
+
+function parseHeroEmbedType(value: string | undefined): HeroEmbedType {
+    return value === 'video' || value === 'carousel' ? value : 'image';
+}
 
 export interface RichTextEditorProps {
     value?: string;
@@ -440,8 +444,8 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
         setEmbedDialog({open: false, type: null});
     };
 
-    const handleHeroConfirm = (id: number) => {
-        const tag = buildEmbedTag({type: 'hero', id});
+    const handleHeroConfirm = (id: number, heroType: HeroEmbedType) => {
+        const tag = buildEmbedTag({type: 'hero', id, heroType});
         insertOrReplacePlaceholder(tag);
         setEmbedDialog({open: false, type: null});
     };
@@ -950,6 +954,11 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
                                 <RichEmbedHeroEditor
                                         open={embedDialog.open && embedDialog.type === 'hero'}
                                         initialId={embedDialog.initialId}
+                                        initialType={parseHeroEmbedType(
+                                                embedDialog.initialExtra?.startsWith('type:')
+                                                        ? embedDialog.initialExtra.substring(5)
+                                                        : undefined
+                                        )}
                                         onConfirm={handleHeroConfirm}
                                         onCancel={handleEmbedCancel}
                                 />

@@ -32,6 +32,7 @@ export type EmbedType =
     | 'today_random'
     | 'collapse'
     | 'carousel';
+export type HeroEmbedType = 'image' | 'video' | 'carousel';
 
 export type LastEmbedType = 'pages' | 'galleries' | 'images' | 'videos' | 'audio' | 'documents';
 
@@ -55,7 +56,7 @@ export interface TodayRandomEmbedOptions {
 export type EmbedDescriptor =
     | { type: 'gallery'; id: number; extra?: string }
     | { type: 'image'; id: number; extra?: string }
-    | { type: 'hero'; id: number; extra?: string }
+    | { type: 'hero'; id: number; heroType?: HeroEmbedType; extra?: string }
     | { type: 'video'; id: number; extra?: string }
     | { type: 'audio'; id: number; extra?: string }
     | { type: 'youtube'; url: string }
@@ -300,7 +301,10 @@ export function buildEmbedTag(descriptor: EmbedDescriptor): string {
     if (descriptor.type === 'today_random') {
         return `<!--vps:embed:today_random:${JSON.stringify(sanitizeTodayRandomOptions(descriptor.options))}-->`;
     }
-    // gallery, image, hero, video, audio — numeric ID based
+    if (descriptor.type === 'hero') {
+        return `<!--vps:embed:hero:${descriptor.id}:type:${descriptor.heroType ?? 'image'}-->`;
+    }
+    // gallery, image, video, audio — numeric ID based
     if (descriptor.extra) {
         return `<!--vps:embed:${descriptor.type}:${descriptor.id}:${descriptor.extra}-->`;
     }
@@ -505,7 +509,15 @@ function parseEmbedContent(type: EmbedType, raw: string): EmbedDescriptor {
     const id = parseInt(idStr, 10);
     if (type === 'gallery') return {type, id, extra};
     if (type === 'image') return {type, id, extra};
-    if (type === 'hero') return {type, id, extra};
+    if (type === 'hero') {
+        const heroType = extra?.startsWith('type:') ? extra.substring(5).toLowerCase() : 'image';
+        return {
+            type,
+            id,
+            heroType: heroType === 'video' || heroType === 'carousel' ? heroType : 'image',
+            extra,
+        };
+    }
     if (type === 'video') return {type, id, extra};
     return {type: 'audio', id, extra};
 }

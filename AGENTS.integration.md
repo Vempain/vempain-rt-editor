@@ -108,6 +108,11 @@ Do not store the editor's WYSIWYG placeholder spans. The package converts tags t
 `onChange`. Supported embed families include gallery, image, hero, video, audio, YouTube, music, GPS time series, last-items, word cloud, today-random,
 collapse, and carousel.
 
+Hero embeds support an image, video, or gallery carousel selected by the editor's Ant Design radio group. The editor uses
+`getPagedSiteFiles` with `file_type: IMAGE` or `VIDEO` for the first two choices and `findGalleries` for the carousel choice. New hero tags have the form
+`<!--vps:embed:hero:[id]:type:[image|video|carousel]-->`. When an existing `<!--vps:embed:hero:[id]-->` tag is opened, it is treated as an image and saved back
+in the typed format.
+
 The package also exports `buildCarouselTag`, `buildEmbedTag`,
 `convertPlaceholdersToTags`, `convertTagsToPlaceholders`, `parseCarouselParams`, and
 `parseEmbeds`, together with their associated types. Use these helpers instead of duplicating tag parsing or string construction in the host application.
