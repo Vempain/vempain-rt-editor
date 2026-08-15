@@ -33,6 +33,13 @@ export const HeroEmbedType = {
 
 export type HeroEmbedType = (typeof HeroEmbedType)[keyof typeof HeroEmbedType];
 
+export const HeroTransition = {
+    FADE: 'fade',
+    SLIDE: 'slide',
+} as const;
+
+export type HeroTransition = (typeof HeroTransition)[keyof typeof HeroTransition];
+
 export interface GalleryVO {
     id: number;
     short_name: string;

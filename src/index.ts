@@ -30,6 +30,7 @@ export type {
     SiteFileQueryParams,
     SiteFileResponse,
     HeroEmbedType,
+    HeroTransition,
 } from './types';
 
 export {FileTypeEnum, QueryDetailEnum} from './types';

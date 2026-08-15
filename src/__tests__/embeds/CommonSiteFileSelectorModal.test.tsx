@@ -222,7 +222,7 @@ describe('RichEmbedHeroEditor', () => {
         renderWithProviders(<RichEmbedHeroEditor open={true} onConfirm={onConfirm} onCancel={jest.fn()}/>);
         await userEvent.click(await screen.findByText('photo-01.jpg'));
         await userEvent.click(screen.getByRole('button', {name: 'OK'}));
-        expect(onConfirm).toHaveBeenCalledWith(10, 'image');
+        expect(onConfirm).toHaveBeenCalledWith(10, 'image', 5, 'slide');
     });
 });
 
@@ -259,4 +259,3 @@ describe('RichEmbedAudioEditor', () => {
         });
     });
 });
-

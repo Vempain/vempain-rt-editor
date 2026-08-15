@@ -33,6 +33,7 @@ export type EmbedType =
     | 'collapse'
     | 'carousel';
 export type HeroEmbedType = 'image' | 'video' | 'carousel';
+export type HeroTransition = 'fade' | 'slide';
 
 export type LastEmbedType = 'pages' | 'galleries' | 'images' | 'videos' | 'audio' | 'documents';
 
@@ -56,7 +57,14 @@ export interface TodayRandomEmbedOptions {
 export type EmbedDescriptor =
     | { type: 'gallery'; id: number; extra?: string }
     | { type: 'image'; id: number; extra?: string }
-    | { type: 'hero'; id: number; heroType?: HeroEmbedType; extra?: string }
+    | {
+    type: 'hero';
+    id: number;
+    heroType?: HeroEmbedType;
+    heroDuration?: number;
+    heroTransition?: HeroTransition;
+    extra?: string;
+}
     | { type: 'video'; id: number; extra?: string }
     | { type: 'audio'; id: number; extra?: string }
     | { type: 'youtube'; url: string }
@@ -302,7 +310,11 @@ export function buildEmbedTag(descriptor: EmbedDescriptor): string {
         return `<!--vps:embed:today_random:${JSON.stringify(sanitizeTodayRandomOptions(descriptor.options))}-->`;
     }
     if (descriptor.type === 'hero') {
-        return `<!--vps:embed:hero:${descriptor.id}:type:${descriptor.heroType ?? 'image'}-->`;
+        const type = descriptor.heroType ?? 'image';
+        const options = type === 'carousel'
+            ? `:duration:${Math.max(1, descriptor.heroDuration ?? 5)}:transition:${descriptor.heroTransition ?? 'slide'}`
+            : '';
+        return `<!--vps:embed:hero:${descriptor.id}:type:${type}${options}-->`;
     }
     // gallery, image, video, audio — numeric ID based
     if (descriptor.extra) {
@@ -510,11 +522,18 @@ function parseEmbedContent(type: EmbedType, raw: string): EmbedDescriptor {
     if (type === 'gallery') return {type, id, extra};
     if (type === 'image') return {type, id, extra};
     if (type === 'hero') {
-        const heroType = extra?.startsWith('type:') ? extra.substring(5).toLowerCase() : 'image';
+        const parts = extra?.split(':') ?? [];
+        const heroType = parts[0] === 'type' ? parts[1]?.toLowerCase() : 'image';
+        const durationIndex = parts.indexOf('duration');
+        const transitionIndex = parts.indexOf('transition');
+        const duration = durationIndex >= 0 ? parseInt(parts[durationIndex + 1] ?? '', 10) : 5;
+        const transition = parts[transitionIndex + 1] === 'fade' ? 'fade' : 'slide';
         return {
             type,
             id,
             heroType: heroType === 'video' || heroType === 'carousel' ? heroType : 'image',
+            heroDuration: Number.isFinite(duration) && duration > 0 ? duration : 5,
+            heroTransition: transition,
             extra,
         };
     }

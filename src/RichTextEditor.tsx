@@ -47,10 +47,20 @@ import {
     RichEmbedYoutubeEditor
 } from './embeds';
 import {EmbedDataProvider} from './embeds/EmbedDataContext';
-import type {EmbedDataProviders, HeroEmbedType} from './types';
+import type {EmbedDataProviders, HeroEmbedType, HeroTransition} from './types';
 
 function parseHeroEmbedType(value: string | undefined): HeroEmbedType {
     return value === 'video' || value === 'carousel' ? value : 'image';
+}
+
+function parseHeroDuration(value: string | undefined): number {
+    const match = value?.match(/duration:(\d+)/);
+    const duration = match ? Number(match[1]) : 5;
+    return Number.isFinite(duration) && duration > 0 ? duration : 5;
+}
+
+function parseHeroTransition(value: string | undefined): HeroTransition {
+    return value?.includes('transition:fade') ? 'fade' : 'slide';
 }
 
 export interface RichTextEditorProps {
@@ -444,8 +454,8 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
         setEmbedDialog({open: false, type: null});
     };
 
-    const handleHeroConfirm = (id: number, heroType: HeroEmbedType) => {
-        const tag = buildEmbedTag({type: 'hero', id, heroType});
+    const handleHeroConfirm = (id: number, heroType: HeroEmbedType, heroDuration: number, heroTransition: HeroTransition) => {
+        const tag = buildEmbedTag({type: 'hero', id, heroType, heroDuration, heroTransition});
         insertOrReplacePlaceholder(tag);
         setEmbedDialog({open: false, type: null});
     };
@@ -959,6 +969,8 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
                                                         ? embedDialog.initialExtra.substring(5)
                                                         : undefined
                                         )}
+                                        initialDuration={parseHeroDuration(embedDialog.initialExtra)}
+                                        initialTransition={parseHeroTransition(embedDialog.initialExtra)}
                                         onConfirm={handleHeroConfirm}
                                         onCancel={handleEmbedCancel}
                                 />

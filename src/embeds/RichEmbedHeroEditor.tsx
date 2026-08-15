@@ -1,6 +1,6 @@
-import {Radio, Space} from 'antd';
+import {InputNumber, Radio, Select, Space} from 'antd';
 import {useEffect, useState} from 'react';
-import {FileTypeEnum, type HeroEmbedType} from '../types';
+import {FileTypeEnum, type HeroEmbedType, HeroTransition, type HeroTransition as HeroTransitionType} from '../types';
 import {CommonSiteFileSelectorModal} from './CommonSiteFileSelectorModal';
 import {RichEmbedGalleryEditor} from './RichEmbedGalleryEditor';
 
@@ -12,18 +12,34 @@ interface RichEmbedHeroEditorProps {
     open: boolean;
     initialId?: number;
     initialType?: HeroEmbedType;
-    onConfirm: (id: number, type: HeroEmbedType) => void;
+    initialDuration?: number;
+    initialTransition?: HeroTransitionType;
+    onConfirm: (id: number, type: HeroEmbedType, duration: number, transition: HeroTransitionType) => void;
     onCancel: () => void;
 }
 
-export function RichEmbedHeroEditor({open, initialId, initialType = 'image', onConfirm, onCancel}: RichEmbedHeroEditorProps) {
+export function RichEmbedHeroEditor({
+                                        open,
+                                        initialId,
+                                        initialType = 'image',
+                                        initialDuration = 5,
+                                        initialTransition = HeroTransition.SLIDE,
+                                        onConfirm,
+                                        onCancel,
+                                    }: RichEmbedHeroEditorProps) {
     const [heroType, setHeroType] = useState<HeroEmbedType>(initialType);
+    const [duration, setDuration] = useState(initialDuration);
+    const [transition, setTransition] = useState<HeroTransitionType>(initialTransition);
     useEffect(() => {
-        if (open) setHeroType(initialType);
-    }, [open, initialType]);
+        if (open) {
+            setHeroType(initialType);
+            setDuration(initialDuration);
+            setTransition(initialTransition);
+        }
+    }, [open, initialDuration, initialTransition, initialType]);
 
     const handleConfirm = (id: number) => {
-        onConfirm(id, heroType);
+        onConfirm(id, heroType, duration, transition);
     };
 
     const typeSelector = (
@@ -38,14 +54,29 @@ export function RichEmbedHeroEditor({open, initialId, initialType = 'image', onC
                 </Space>
             </Radio.Group>
     );
+    const carouselOptions = heroType === 'carousel' && (
+            <Space style={{display: 'flex', marginBottom: 12}}>
+                <InputNumber min={1} max={3600} value={duration} addonBefore="Seconds"
+                             onChange={(value) => value != null && setDuration(value)}/>
+                <Select
+                        value={transition}
+                        options={[
+                            {label: 'Slide transition', value: HeroTransition.SLIDE},
+                            {label: 'Fade transition', value: HeroTransition.FADE},
+                        ]}
+                        onChange={setTransition}
+                />
+            </Space>
+    );
+    const selectorContent = <>{typeSelector}{carouselOptions}</>;
 
     const selector = heroType === 'carousel'
             ? <RichEmbedGalleryEditor
                     open={open}
                     initialId={initialId}
-                    onConfirm={(id) => onConfirm(id, heroType)}
+                    onConfirm={(id) => onConfirm(id, heroType, duration, transition)}
                     onCancel={onCancel}
-                    extraContent={typeSelector}
+                    extraContent={selectorContent}
             />
             : <CommonSiteFileSelectorModal
                     open={open}
@@ -54,7 +85,7 @@ export function RichEmbedHeroEditor({open, initialId, initialType = 'image', onC
                     initialId={initialId}
                     searchPlaceholder={`Search by ${heroType === 'video' ? 'video' : 'image'} file name...`}
                     emptyText={`No ${heroType === 'video' ? 'videos' : 'images'} found`}
-                    extraContent={typeSelector}
+                    extraContent={selectorContent}
                     onConfirm={handleConfirm}
                     onCancel={onCancel}
             />;
