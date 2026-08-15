@@ -111,7 +111,7 @@ collapse, and carousel.
 Hero embeds support an image, video, or gallery carousel selected by the editor's Ant Design radio group. The editor uses
 `getPagedSiteFiles` with `file_type: IMAGE` or `VIDEO` for the first two choices and `findGalleries` for the carousel choice. New hero tags have the form
 `<!--vps:embed:hero:[id]:type:[image|video|carousel]-->`. When an existing `<!--vps:embed:hero:[id]-->` tag is opened, it is treated as an image and saved back
-in the typed format.
+in the typed format. Carousel heroes additionally store `:duration:[seconds]:transition:[fade|slide]`; the editor defaults to 5 seconds and a slide transition.
 
 The package also exports `buildCarouselTag`, `buildEmbedTag`,
 `convertPlaceholdersToTags`, `convertTagsToPlaceholders`, `parseCarouselParams`, and

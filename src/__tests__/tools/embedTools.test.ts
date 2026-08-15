@@ -31,6 +31,16 @@ describe('buildEmbedTag', () => {
         expect(buildEmbedTag({type: 'hero', id: 5, heroType: 'image'})).toBe('<!--vps:embed:hero:5:type:image-->');
     });
 
+    it('builds a hero carousel tag with duration and transition', () => {
+        expect(buildEmbedTag({
+            type: 'hero',
+            id: 1084,
+            heroType: 'carousel',
+            heroDuration: 12,
+            heroTransition: 'fade',
+        })).toBe('<!--vps:embed:hero:1084:type:carousel:duration:12:transition:fade-->');
+    });
+
     it('builds a video embed tag', () => {
         expect(buildEmbedTag({type: 'video', id: 99})).toBe('<!--vps:embed:video:99-->');
     });
