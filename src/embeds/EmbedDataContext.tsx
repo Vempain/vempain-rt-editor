@@ -1,8 +1,8 @@
 import React, {createContext, useContext} from 'react';
-import type {EmbedDataProviders, QueryDetailEnum} from '../types';
+import type {EmbedDataProviders} from '../types';
 
 const defaultProviders: EmbedDataProviders = {
-    findGalleries: async (_params: { details: QueryDetailEnum }) => {
+    findGalleries: async (_params) => {
         throw new Error('Embed data provider findGalleries is not configured.');
     },
     getPagedSiteFiles: async (_params) => {
@@ -32,4 +32,3 @@ export function EmbedDataProvider({providers, children}: EmbedDataProviderProps)
 export function useEmbedDataProviders(): EmbedDataProviders {
     return useContext(EmbedDataContext);
 }
-

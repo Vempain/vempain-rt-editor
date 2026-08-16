@@ -25,6 +25,7 @@ export type {
     DataSetQueryParams,
     DataSummaryResponse,
     EmbedDataProviders,
+    GalleryQueryParams,
     GalleryVO,
     PagedResponse,
     SiteFileQueryParams,

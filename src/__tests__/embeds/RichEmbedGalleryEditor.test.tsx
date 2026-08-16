@@ -6,7 +6,7 @@ import React from 'react';
 import {describe, expect, it, jest} from '@jest/globals';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {RichEmbedGalleryEditor} from '../../embeds/RichEmbedGalleryEditor';
+import {getNextGalleryPage, handleGalleryPopupScroll, requestNextGalleryPage, RichEmbedGalleryEditor} from '../../embeds/RichEmbedGalleryEditor';
 import {mockGalleries, renderWithProviders} from '../../test-utils/renderWithProviders';
 
 describe('RichEmbedGalleryEditor', () => {
@@ -17,11 +17,17 @@ describe('RichEmbedGalleryEditor', () => {
         expect(await screen.findByText('Insert Gallery Embed')).toBeInTheDocument();
     });
 
-    it('calls findGalleries when opened', async () => {
+    it('calls findGalleries with the first page when opened', async () => {
         const {providers} = renderWithProviders(
                 <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
         );
-        await waitFor(() => expect(providers.findGalleries).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(providers.findGalleries).toHaveBeenCalledWith({
+            page: 0,
+            size: 50,
+            sort_by: 'short_name',
+            direction: 'ASC',
+            search: undefined,
+        }));
     });
 
     it('displays galleries in the select after loading', async () => {
@@ -54,6 +60,48 @@ describe('RichEmbedGalleryEditor', () => {
         expect(screen.getByRole('combobox')).toBeDisabled();
     });
 
+    it('searches galleries through the provider instead of filtering locally', async () => {
+        const user = userEvent.setup();
+        const {providers} = renderWithProviders(
+                <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
+        );
+        await waitFor(() => expect(providers.findGalleries).toHaveBeenCalledTimes(1));
+
+        await user.type(screen.getByRole('combobox'), 'winter');
+
+        await waitFor(() => expect(providers.findGalleries).toHaveBeenLastCalledWith({
+            page: 0,
+            size: 50,
+            sort_by: 'short_name',
+            direction: 'ASC',
+            search: 'winter',
+        }));
+    });
+
+    it('detects when another gallery page should be loaded', () => {
+        expect(getNextGalleryPage(100, 100, 100, 0, 2)).toBe(1);
+        expect(getNextGalleryPage(0, 100, 500, 0, 2)).toBeNull();
+        expect(getNextGalleryPage(100, 100, 100, 1, 2)).toBeNull();
+    });
+
+    it('requests the next gallery page only when more pages are available', () => {
+        const loadPage = jest.fn();
+
+        requestNextGalleryPage(100, 100, 100, 0, 2, loadPage);
+        requestNextGalleryPage(0, 100, 500, 0, 2, loadPage);
+
+        expect(loadPage).toHaveBeenCalledWith(1);
+        expect(loadPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not load pages while a gallery request is in progress', () => {
+        const loadPage = jest.fn();
+
+        handleGalleryPopupScroll(100, 100, 100, 0, 2, true, loadPage);
+
+        expect(loadPage).not.toHaveBeenCalled();
+    });
+
     it('calls onCancel when the Cancel button is clicked', async () => {
         const onCancel = jest.fn();
         renderWithProviders(
@@ -72,6 +120,18 @@ describe('RichEmbedGalleryEditor', () => {
         await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
         const okBtn = screen.getByRole('button', {name: /ok/i});
         expect(okBtn).toBeDisabled();
+    });
+
+    it('confirms the selected gallery', async () => {
+        const onConfirm = jest.fn();
+        renderWithProviders(
+                <RichEmbedGalleryEditor open={true} initialId={2} onConfirm={onConfirm} onCancel={jest.fn()}/>,
+        );
+
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        await userEvent.click(screen.getByRole('button', {name: /ok/i}));
+
+        expect(onConfirm).toHaveBeenCalledWith(2);
     });
 
     it('does not render modal content when open=false', () => {
