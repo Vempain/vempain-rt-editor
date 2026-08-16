@@ -44,7 +44,7 @@ export function PageBodyEditor({body, saveBody}: { body: string; saveBody: (body
                     value={body}
                     onChange={saveBody}
                     dataProviders={{
-                        findGalleries: ({details}) => galleryApi.findAll({details}),
+                        findGalleries: (params) => galleryApi.findPageableList(params),
                         getPagedSiteFiles: (params) => fileApi.findPageable(params),
                         getAllDataSets: (params) => dataApi.findAll(params)
                     }}
@@ -74,7 +74,7 @@ The editor accepts partial providers so a host can expose only the selectors it 
 
 ```ts
 interface EmbedDataProviders {
-    findGalleries: (params: { details: QueryDetailEnum }) => Promise<GalleryVO[]>;
+    findGalleries: (params: { page: number; size: number; sort_by?: string; direction?: 'ASC' | 'DESC'; search?: string }) => Promise<PagedResponse<GalleryVO>>;
     getPagedSiteFiles: (
             params: Record<string, string | number | boolean | undefined>
     ) => Promise<PagedResponse<SiteFileResponse>>;

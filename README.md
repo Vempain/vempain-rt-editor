@@ -13,16 +13,19 @@ React component library for Vempain rich text editing.
 The editor no longer imports admin frontend services directly. Host apps must inject provider callbacks via `dataProviders`.
 
 ```tsx
-import {RichTextEditor, QueryDetailEnum, type EmbedDataProviders} from '@vempain/vempain-rt-editor';
+import {RichTextEditor, type EmbedDataProviders} from '@vempain/vempain-rt-editor';
 
 const providers: EmbedDataProviders = {
-    findGalleries: (params) => galleryAPI.findAll(params),
+    findGalleries: (params) => galleryAPI.findPageableList(params),
     getPagedSiteFiles: (params) => siteFileAPI.getPagedSiteFiles(params),
     getAllDataSets: (params) => dataAPI.getAllDataSets(params),
 };
 
 <RichTextEditor value={value} onChange={setValue} dataProviders={providers}/>
 ```
+
+Gallery providers receive a zero-based `page`, `size`, sorting, and optional `search` value. The editor requests the first page when opened or searched and
+requests subsequent pages as the gallery dropdown is scrolled.
 
 ## Scripts
 

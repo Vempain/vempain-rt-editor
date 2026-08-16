@@ -34,7 +34,11 @@ export type LooseProviderOverrides = Partial<Record<keyof EmbedDataProviders, (.
 
 function buildDefaultProviders(overrides?: LooseProviderOverrides): EmbedDataProviders {
     return {
-        findGalleries: jest.fn<EmbedDataProviders['findGalleries']>().mockResolvedValue(mockGalleries),
+        findGalleries: jest.fn<EmbedDataProviders['findGalleries']>().mockResolvedValue({
+            content: mockGalleries,
+            page: 0,
+            total_pages: 1,
+        }),
         getPagedSiteFiles: jest.fn<EmbedDataProviders['getPagedSiteFiles']>().mockResolvedValue({
             content: mockSiteFiles,
             page: 0,
