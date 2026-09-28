@@ -109,12 +109,11 @@ describe('RichEmbedCarouselEditor', () => {
     });
 
     it('validates that item title is required', async () => {
+        const user = userEvent.setup();
         renderWithProviders(
                 <RichEmbedCarouselEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
         );
-        const bodyInput = screen.getByPlaceholderText('Body');
-        await userEvent.type(bodyInput, 'Some body');
-        await userEvent.click(screen.getByRole('button', {name: /ok/i}));
+        await user.click(screen.getByRole('button', {name: /ok/i}));
         expect(await screen.findByText('Please enter a title')).toBeInTheDocument();
     });
 
@@ -148,4 +147,3 @@ describe('RichEmbedCarouselEditor', () => {
         expect(screen.getAllByPlaceholderText('Title').length).toBe(1);
     });
 });
-
