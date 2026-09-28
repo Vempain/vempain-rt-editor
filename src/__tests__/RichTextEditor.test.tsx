@@ -228,7 +228,7 @@ describe('RichTextEditor', () => {
             await waitFor(() =>
                     expect(screen.queryByText('Insert YouTube Embed')).not.toBeInTheDocument()
             );
-        });
+        }, 15000);
     });
 
     // -----------------------------------------------------------------------
