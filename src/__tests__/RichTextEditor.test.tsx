@@ -224,7 +224,7 @@ describe('RichTextEditor', () => {
             renderWithProviders(<RichTextEditor value=""/>);
             fireEvent.mouseDown(screen.getByRole('button', {name: /youtube/i}));
             expect(await screen.findByText('Insert YouTube Embed')).toBeInTheDocument();
-            await userEvent.click(screen.getByRole('button', {name: /cancel/i}));
+            fireEvent.click(screen.getByRole('button', {name: /cancel/i}));
             await waitFor(() =>
                     expect(screen.queryByText('Insert YouTube Embed')).not.toBeInTheDocument()
             );
