@@ -8,7 +8,7 @@ component library published to GitHub Packages.
 - Package repository: https://github.com/Vempain/vempain-rt-editor
 - Renderer repository: https://github.com/Vempain/vempain-rt-renderer
 - Example editor host: https://github.com/Vempain/vempain-admin-frontend
-- Rich-text renderer host: https://github.com/Vempain/vempain-website
+- Rich-text renderer host: https://github.com/Vempain/vempain-website-frontend
 
 Read `src/index.ts`, `src/RichTextEditor.tsx`, and `src/types.ts` in the package when a published type declaration differs from this guide. The public API is
 intentionally re-exported from the package root.
