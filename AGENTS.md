@@ -5,7 +5,8 @@
 - Package: `@vempain/vempain-rt-editor` (React 19 + TypeScript library, ESM output) (`package.json`).
 - Main public surface is `RichTextEditor` + embed utilities/types re-exported from `src/index.ts`.
 - This repo is a library, not an app: embed data comes from host-provided callbacks, never from internal API clients.
-- Public usage docs are mirrored in `vempain-site`; keep the editor props, exported helpers, and provider contract aligned with those docs.
+- Public usage docs are mirrored in `vempain-site` (`src/components/RtEditor.tsx`) and the host-integration guide is `AGENTS.integration.md`; keep the
+  editor props, exported helpers, and provider contract aligned with both.
 
 ## Architecture and Data Flow
 
@@ -37,20 +38,23 @@
 - Jest uses `ts-jest` + jsdom and has non-obvious setup in `src/setupTests.ts` (MessageChannel, ResizeObserver, matchMedia, getComputedStyle patching).
 - `rc-virtual-list` is mocked in `__mocks__/rc-virtual-list.tsx`; tests rely on `data-testid="virtual-list"` for scroll simulation.
 - Use `src/test-utils/renderWithProviders.tsx` for component tests; it injects `EmbedDataProvider` and provider mocks.
-- Existing tests are example-driven and granular; follow style in `src/__tests__/RichTextEditor.test.tsx` and `src/tools/__tests__/embedTools.test.ts`.
+- Existing tests are example-driven and granular; follow style in `src/__tests__/RichTextEditor.test.tsx` and `src/__tests__/tools/embedTools.test.ts`.
 - Test files must all be placed in a separate directory under src called `__tests__` folders and named `*.test.ts` / `*.test.tsx` for Jest discovery. Under the
   main directory of src/__tests__/ are subfolders reflecting the main src structure (for example, `src/__tests__/embeds/` for embed dialog tests and
   `src/__tests__/tools/` for parser tests).
 - All tasks must always be validated by running the test suite, coverage and linting before pushing commits or creating pull requests. Use `yarn test`,
   `yarn test:coverage` and `yarn lint` for this purpose. If you want to automatically fix linting issues, you can use `yarn lint:fix`. All errors and warnings
   must be resolved before the task can be considered complete.
+- Treat all deprecation warnings as required maintenance work: whenever `yarn test`, `yarn test:coverage`, `yarn lint`, or build output reports deprecated
+  APIs/props/behavior, update the implementation and tests immediately so no deprecation warnings remain (same rule as in `vempain-rt-renderer`).
+- Do not add TypeScript `enum`; use `as const` objects like the other Vempain frontends.
 
 ## Integration and Release Notes
 
 - Host apps must pass provider callbacks compatible with `EmbedDataProviders` in `src/types.ts`.
 - CI delegates to a reusable workflow (`.github/workflows/ci.yaml` -> `Vempain/vempain-workflows/.../frontend-library.yaml`).
-- `build:production` references `generateBuildInfo.cjs`, while repository contains `generateBuildInfo.js`; verify release script expectations before changing
-  build/version flow.
+- `prebuild`/`build:production` run `node generateBuildInfo.js`, which writes `src/buildInfo.json` (a derived artifact, excluded from the published
+  `dist/`).
 - Package publishes only `dist/` artifacts (`package.json` `files` and `exports`).
 
 ## Tag ACL rule
