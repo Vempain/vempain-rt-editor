@@ -52,3 +52,7 @@
 - `build:production` references `generateBuildInfo.cjs`, while repository contains `generateBuildInfo.js`; verify release script expectations before changing
   build/version flow.
 - Package publishes only `dist/` artifacts (`package.json` `files` and `exports`).
+
+## Tag ACL rule
+
+Tags are metadata, not ACL-bearing resources. Tag entities have no ACL information, so tag list, search, and mutation endpoints must not perform ACL checks on tags. ACL checks apply only to resources that explicitly carry an ACL.
