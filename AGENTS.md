@@ -11,6 +11,9 @@
 ## Architecture and Data Flow
 
 - `src/RichTextEditor.tsx` is the orchestration hub: toolbar actions -> editor DOM mutations -> HTML sync -> `onChange`.
+- `onEmbedsChange` is the second, optional output: the `EmbedDescriptor` list of the canonical content (`parseEmbeds`), reported with every
+  `onChange` and once per externally supplied `value`. It stays generic (all embed types, document order) so hosts such as the admin
+  frontend can derive their own relations (page -> gallery links) from it; never add host-specific filtering to the editor.
 - Canonical content is embed-comment HTML (for example `<!--vps:embed:gallery:7-->`), not placeholder spans.
 - WYSIWYG mode uses placeholder spans via `convertTagsToPlaceholders`; source mode edits raw HTML directly.
 - Conversion/parsing rules live in `src/tools/embedTools.ts`; keep UI placeholder behavior aligned with parser behavior.

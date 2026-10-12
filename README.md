@@ -27,6 +27,10 @@ const providers: EmbedDataProviders = {
 Gallery providers receive a zero-based `page`, `size`, sorting, and optional `search` value. The editor requests the first page when opened or searched and
 requests subsequent pages as the gallery dropdown is scrolled.
 
+The optional `onEmbedsChange` prop receives the `EmbedDescriptor` list of the canonical content, in document order, whenever the content changes and once
+per value supplied from outside. Hosts use it for bookkeeping that follows the embeds, such as the galleries a page links to, instead of parsing the HTML
+themselves.
+
 ## Scripts
 
 - `yarn build` - Build TS output to `dist/`

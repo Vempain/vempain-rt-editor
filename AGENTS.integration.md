@@ -55,12 +55,19 @@ export function PageBodyEditor({body, saveBody}: { body: string; saveBody: (body
 
 `RichTextEditor` props:
 
-| Prop            | Type                          | Meaning                                                                                     |
-|-----------------|-------------------------------|---------------------------------------------------------------------------------------------|
-| `value`         | `string \| undefined`         | Canonical HTML content. Embed tags are stored as HTML comments.                             |
-| `onChange`      | `(value: string) => void`     | Called whenever the content changes; persist this string, not the rendered placeholder DOM. |
-| `readOnly`      | `boolean`                     | Hides editing controls and makes the editor non-editable. Defaults to `false`.              |
-| `dataProviders` | `Partial<EmbedDataProviders>` | Host callbacks used by embed selector dialogs.                                              |
+| Prop             | Type                                  | Meaning                                                                                                                                                                                                                                           |
+|------------------|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `value`          | `string \| undefined`                 | Canonical HTML content. Embed tags are stored as HTML comments.                                                                                                                                                                                   |
+| `onChange`       | `(value: string) => void`             | Called whenever the content changes; persist this string, not the rendered placeholder DOM.                                                                                                                                                       |
+| `onEmbedsChange` | `(embeds: EmbedDescriptor[]) => void` | Called with the embeds of the canonical content, in document order, whenever the content changes and once when a `value` arrives from outside (mount, form reset). Lets the host derive data from the embeds without parsing the HTML; see below. |
+| `readOnly`       | `boolean`                             | Hides editing controls and makes the editor non-editable. Defaults to `false`.                                                                                                                                                                    |
+| `dataProviders`  | `Partial<EmbedDataProviders>`         | Host callbacks used by embed selector dialogs.                                                                                                                                                                                                    |
+
+`onEmbedsChange` is the hook for host-side bookkeeping that depends on the embeds, for example the list of galleries a page depends on. The
+editor itself knows nothing about such relations: it reports every embed (`gallery`, `image`, `hero` with its `heroType`, …) and the host
+filters what it needs. The admin frontend derives the page's gallery links from the `gallery` embeds and the `hero` embeds of type
+`carousel` this way and saves them together with the page. Keep the callback stable with `useCallback` when it is defined in a component;
+the editor parses the content only when the prop is present.
 
 For preview-only use, pass `readOnly` and omit providers if no selector dialogs are needed:
 
@@ -121,7 +128,8 @@ The package also exports `buildCarouselTag`, `buildEmbedTag`,
 
 1. Install the package from GitHub Packages and ensure all peer dependencies are installed.
 2. Map the host's gallery, site-file, and dataset APIs to `EmbedDataProviders`.
-3. Pass the current canonical HTML through `value` and persist every `onChange` value.
+3. Pass the current canonical HTML through `value` and persist every `onChange` value; use `onEmbedsChange` for host data that follows
+   the embeds (such as which galleries a page links to) instead of parsing the HTML in the host.
 4. Render the editor inside the host's Ant Design/theme providers.
 5. Use `readOnly` for publish previews; do not use a separate HTML conversion pipeline.
 6. Keep the corresponding renderer runtime configured in the public frontend; editor tags only become functional when the renderer has the required APIs.

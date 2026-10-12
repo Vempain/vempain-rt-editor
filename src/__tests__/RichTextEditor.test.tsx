@@ -8,6 +8,7 @@ import {describe, expect, it, jest} from '@jest/globals';
 import {fireEvent, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {RichTextEditor} from '../RichTextEditor';
+import {convertTagsToPlaceholders} from '../tools/embedTools';
 import {renderWithProviders} from '../test-utils/renderWithProviders';
 
 describe('RichTextEditor', () => {
@@ -143,6 +144,65 @@ describe('RichTextEditor', () => {
 
             rerender(<RichTextEditor value="<p>New</p>"/>);
             await waitFor(() => expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('<p>New</p>'));
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    // Embed reporting to the host
+    // -----------------------------------------------------------------------
+    describe('onEmbedsChange', () => {
+        const body = '<p>Trip</p><!--vps:embed:gallery:7--><p>x</p><!--vps:embed:hero:3:type:carousel:duration:5:transition:slide--><!--vps:embed:image:9-->';
+
+        it('reports the embeds of the initial value in document order', () => {
+            const onEmbedsChange = jest.fn();
+            renderWithProviders(<RichTextEditor value={body} onEmbedsChange={onEmbedsChange}/>);
+            expect(onEmbedsChange).toHaveBeenCalledTimes(1);
+            expect(onEmbedsChange).toHaveBeenLastCalledWith([
+                expect.objectContaining({type: 'gallery', id: 7}),
+                expect.objectContaining({type: 'hero', id: 3, heroType: 'carousel'}),
+                expect.objectContaining({type: 'image', id: 9}),
+            ]);
+        });
+
+        it('reports an empty list for content without embeds and nothing when the prop is absent', () => {
+            const onEmbedsChange = jest.fn();
+            renderWithProviders(<RichTextEditor value="<p>Plain</p>" onEmbedsChange={onEmbedsChange}/>);
+            expect(onEmbedsChange).toHaveBeenLastCalledWith([]);
+            expect(() => renderWithProviders(<RichTextEditor value={body}/>)).not.toThrow();
+        });
+
+        it('reports the embeds again when the value changes from outside', async () => {
+            const onEmbedsChange = jest.fn();
+            const {rerender} = renderWithProviders(<RichTextEditor value="<p>Old</p>" onEmbedsChange={onEmbedsChange}/>);
+            expect(onEmbedsChange).toHaveBeenLastCalledWith([]);
+
+            rerender(<RichTextEditor value="<!--vps:embed:gallery:12-->" onEmbedsChange={onEmbedsChange}/>);
+            await waitFor(() => expect(onEmbedsChange).toHaveBeenLastCalledWith([expect.objectContaining({type: 'gallery', id: 12})]));
+        });
+
+        it('reports the embeds typed in source mode', async () => {
+            const onEmbedsChange = jest.fn();
+            const onChange = jest.fn();
+            renderWithProviders(<RichTextEditor value="" onChange={onChange} onEmbedsChange={onEmbedsChange}/>);
+            await userEvent.click(screen.getByRole('button', {name: /html/i}));
+            const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+            fireEvent.change(textarea, {target: {value: '<p>a</p><!--vps:embed:gallery:5--><!--vps:embed:gallery:5-->'}});
+
+            expect(onChange).toHaveBeenLastCalledWith('<p>a</p><!--vps:embed:gallery:5--><!--vps:embed:gallery:5-->');
+            expect(onEmbedsChange).toHaveBeenLastCalledWith([
+                expect.objectContaining({type: 'gallery', id: 5}),
+                expect.objectContaining({type: 'gallery', id: 5}),
+            ]);
+        });
+
+        it('reports the embeds after a WYSIWYG edit', () => {
+            const onEmbedsChange = jest.fn();
+            renderWithProviders(<RichTextEditor value="<p>Start</p>" onEmbedsChange={onEmbedsChange}/>);
+            const editor = document.querySelector('[contenteditable="true"]') as HTMLElement;
+            editor.innerHTML = '<p>Start</p>' + convertTagsToPlaceholders('<!--vps:embed:gallery:21-->');
+            fireEvent.input(editor);
+
+            expect(onEmbedsChange).toHaveBeenLastCalledWith([expect.objectContaining({type: 'gallery', id: 21})]);
         });
     });
 

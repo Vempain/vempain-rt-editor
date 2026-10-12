@@ -4,9 +4,11 @@ import {
     type CollapseCarouselItem,
     convertPlaceholdersToTags,
     convertTagsToPlaceholders,
+    type EmbedDescriptor,
     type EmbedType,
     type LastEmbedType,
     parseCarouselParams,
+    parseEmbeds,
     type TodayRandomEmbedOptions,
     type WordCloudEmbedOptions
 } from './tools/embedTools';
@@ -66,6 +68,12 @@ function parseHeroTransition(value: string | undefined): HeroTransition {
 export interface RichTextEditorProps {
     value?: string;
     onChange?: (value: string) => void;
+    /**
+     * Receives the embeds of the canonical content, in document order, every time the content changes and once when a value
+     * arrives from outside (mount, form reset). Lets a host derive data from the embeds, such as the galleries a page depends on,
+     * without parsing the HTML itself. Not called when the prop is absent.
+     */
+    onEmbedsChange?: (embeds: EmbedDescriptor[]) => void;
     /** When true, hides the toolbar and makes the content non-editable */
     readOnly?: boolean;
     /** Data provider callbacks for embed selectors */
@@ -108,7 +116,7 @@ interface EmbedDialogState {
  * - Toggle between WYSIWYG and HTML source view
  * - Click-to-edit for existing embed placeholders
  */
-export function RichTextEditor({value, onChange, readOnly = false, dataProviders}: RichTextEditorProps) {
+export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = false, dataProviders}: RichTextEditorProps) {
     const editorRef = useRef<HTMLDivElement>(null);
     const [sourceMode, setSourceMode] = useState(false);
     const [sourceValue, setSourceValue] = useState(value || '');
@@ -124,10 +132,17 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
 
     const [linkForm] = Form.useForm();
 
+    // Report the embeds of the canonical HTML to the host, when it asked for them
+    const reportEmbeds = useCallback((html: string) => {
+        if (!onEmbedsChange) return;
+        onEmbedsChange(parseEmbeds(html).flatMap((segment) => segment.kind === 'embed' ? [segment.descriptor] : []));
+    }, [onEmbedsChange]);
+
     // Initialise htmlContentRef on mount
     useEffect(() => {
         htmlContentRef.current = value || '';
         setSourceValue(value || '');
+        reportEmbeds(value || '');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -150,8 +165,9 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
             if (!sourceMode && editorRef.current) {
                 editorRef.current.innerHTML = convertTagsToPlaceholders(value || '');
             }
+            reportEmbeds(value || '');
         }
-    }, [value, sourceMode]);
+    }, [value, sourceMode, reportEmbeds]);
 
     const getEditorHtml = useCallback((): string => {
         if (!editorRef.current) return htmlContentRef.current;
@@ -164,13 +180,15 @@ export function RichTextEditor({value, onChange, readOnly = false, dataProviders
         setSourceValue(html);
         prevValueRef.current = html;
         onChange?.(html);
-    }, [getEditorHtml, onChange]);
+        reportEmbeds(html);
+    }, [getEditorHtml, onChange, reportEmbeds]);
 
     const handleSourceChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         htmlContentRef.current = e.target.value;
         setSourceValue(e.target.value);
         prevValueRef.current = e.target.value;
         onChange?.(e.target.value);
+        reportEmbeds(e.target.value);
     };
 
     const handleModeSwitch = (toSource: boolean) => {
