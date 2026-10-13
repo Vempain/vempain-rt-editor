@@ -56,8 +56,13 @@ export function RichEmbedHeroEditor({
     );
     const carouselOptions = heroType === 'carousel' && (
             <Space style={{display: 'flex', marginBottom: 12}}>
-                <InputNumber min={1} max={3600} value={duration} addonBefore="Seconds"
-                             onChange={(value) => value != null && setDuration(value)}/>
+                <Space.Compact>
+                    <span style={{display: 'inline-flex', alignItems: 'center', padding: '0 11px', border: '1px solid #d9d9d9', borderRight: 0}}>
+                        Seconds
+                    </span>
+                    <InputNumber min={1} max={3600} value={duration}
+                                 onChange={(value) => value != null && setDuration(value)}/>
+                </Space.Compact>
                 <Select
                         value={transition}
                         options={[

@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import {describe, expect, it, jest} from '@jest/globals';
-import {screen, waitFor} from '@testing-library/react';
+import {fireEvent, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {RichEmbedLastEditor} from '../../embeds/RichEmbedLastEditor';
 import {renderWithProviders} from '../../test-utils/renderWithProviders';
@@ -102,5 +102,16 @@ describe('RichEmbedLastEditor', () => {
         // The count input should render with its value within [1, 100]
         expect(screen.getByDisplayValue('50')).toBeInTheDocument();
     });
-});
 
+    it('does not confirm when the count is cleared', async () => {
+        const onConfirm = jest.fn();
+        renderWithProviders(
+                <RichEmbedLastEditor open={true} initialCount={3} onConfirm={onConfirm} onCancel={jest.fn()}/>,
+        );
+
+        fireEvent.change(screen.getByLabelText('Count'), {target: {value: ''}});
+        await userEvent.click(screen.getByRole('button', {name: /ok/i}));
+        expect(await screen.findByText('Please enter count')).toBeInTheDocument();
+        expect(onConfirm).not.toHaveBeenCalled();
+    });
+});

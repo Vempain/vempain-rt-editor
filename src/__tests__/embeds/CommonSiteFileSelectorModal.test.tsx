@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import {describe, expect, it, jest} from '@jest/globals';
-import {fireEvent, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {CommonSiteFileSelectorModal} from '../../embeds/CommonSiteFileSelectorModal';
 import {mockSiteFiles, renderWithProviders} from '../../test-utils/renderWithProviders';
@@ -179,6 +179,75 @@ describe('CommonSiteFileSelectorModal', () => {
 
         await waitFor(() => expect(providers.getPagedSiteFiles).toHaveBeenCalledTimes(2));
         expect(await screen.findByText('file2.jpg')).toBeInTheDocument();
+    });
+});
+
+describe('CommonSiteFileSelectorModal load-more guard', () => {
+    it('ignores further scroll events while the next page is still loading', async () => {
+        const page0: PagedResponse<SiteFileResponse> = {
+            content: [{id: 1, file_name: 'file1.jpg'}],
+            page: 0,
+            total_pages: 3,
+        };
+        const page1: PagedResponse<SiteFileResponse> = {
+            content: [{id: 2, file_name: 'file2.jpg'}],
+            page: 1,
+            total_pages: 3,
+        };
+        let resolvePage1: (value: PagedResponse<SiteFileResponse>) => void = () => undefined;
+        const pendingPage1 = new Promise<PagedResponse<SiteFileResponse>>((resolve) => {
+            resolvePage1 = resolve;
+        });
+        const getPagedSiteFiles = jest.fn<EmbedDataProviders['getPagedSiteFiles']>()
+                .mockResolvedValueOnce(page0)
+                .mockReturnValueOnce(pendingPage1);
+
+        renderWithProviders(
+                <CommonSiteFileSelectorModal {...defaultProps}/>,
+                {providerOverrides: {getPagedSiteFiles}},
+        );
+        await waitFor(() => expect(screen.getByText('file1.jpg')).toBeInTheDocument());
+
+        const listContainer = screen.getByTestId('virtual-list');
+        Object.defineProperty(listContainer, 'scrollTop', {value: 300, writable: true});
+        Object.defineProperty(listContainer, 'clientHeight', {value: 320, writable: true});
+        Object.defineProperty(listContainer, 'scrollHeight', {value: 600, writable: true});
+
+        fireEvent.scroll(listContainer);
+        await waitFor(() => expect(getPagedSiteFiles).toHaveBeenCalledTimes(2));
+
+        // While page 1 is still pending, further scrolls must not start another request
+        fireEvent.scroll(listContainer);
+        fireEvent.scroll(listContainer);
+        expect(getPagedSiteFiles).toHaveBeenCalledTimes(2);
+
+        await act(async () => {
+            resolvePage1(page1);
+        });
+        expect(await screen.findByText('file2.jpg')).toBeInTheDocument();
+    });
+
+    it('does not load more when the list is not scrolled near the bottom', async () => {
+        const page0: PagedResponse<SiteFileResponse> = {
+            content: [{id: 1, file_name: 'file1.jpg'}],
+            page: 0,
+            total_pages: 2,
+        };
+        const getPagedSiteFiles = jest.fn<EmbedDataProviders['getPagedSiteFiles']>().mockResolvedValue(page0);
+
+        renderWithProviders(
+                <CommonSiteFileSelectorModal {...defaultProps}/>,
+                {providerOverrides: {getPagedSiteFiles}},
+        );
+        await waitFor(() => expect(screen.getByText('file1.jpg')).toBeInTheDocument());
+
+        const listContainer = screen.getByTestId('virtual-list');
+        Object.defineProperty(listContainer, 'scrollTop', {value: 0, writable: true});
+        Object.defineProperty(listContainer, 'clientHeight', {value: 320, writable: true});
+        Object.defineProperty(listContainer, 'scrollHeight', {value: 600, writable: true});
+
+        fireEvent.scroll(listContainer);
+        expect(getPagedSiteFiles).toHaveBeenCalledTimes(1);
     });
 });
 

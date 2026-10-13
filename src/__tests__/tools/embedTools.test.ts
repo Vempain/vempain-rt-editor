@@ -597,3 +597,155 @@ describe('buildEmbedTag → parseEmbeds full round-trip', () => {
         expect(tag2).toBe(tag);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Parser edge cases (bracket scanner, overlapping matches, malformed payloads)
+// ---------------------------------------------------------------------------
+describe('parseEmbeds edge cases', () => {
+    it('leaves an embed opener without a type colon untouched', () => {
+        const html = '<p>a</p><!--vps:embed:collapse';
+        expect(parseEmbeds(html)).toEqual([{kind: 'html', content: html}]);
+        expect(convertTagsToPlaceholders(html)).toBe(html);
+    });
+
+    it('ignores JSON-style openers whose type is neither collapse nor carousel', () => {
+        const html = '<!--vps:embed:table:[1]--><p>x</p>';
+        expect(parseEmbeds(html)).toEqual([{kind: 'html', content: html}]);
+    });
+
+    it('accepts spaces between the type colon and the JSON array', () => {
+        const segments = parseEmbeds('<!--vps:embed:collapse:  [{"title":"A","body":"B"}]-->');
+        expect(segments).toEqual([
+            {kind: 'embed', descriptor: {type: 'collapse', items: [{title: 'A', body: 'B'}]}},
+        ]);
+    });
+
+    it('skips a simple embed tag that sits inside a collapse JSON payload (overlapping match)', () => {
+        const html = '<!--vps:embed:collapse:[{"title":"<!--vps:embed:gallery:1-->","body":"b"}]--><p>x</p>';
+        const segments = parseEmbeds(html);
+        expect(segments).toHaveLength(2);
+        expect(segments[0]).toEqual({
+            kind: 'embed',
+            descriptor: {type: 'collapse', items: [{title: '<!--vps:embed:gallery:1-->', body: 'b'}]},
+        });
+        expect(segments[1]).toEqual({kind: 'html', content: '<p>x</p>'});
+    });
+
+    it('renders a single placeholder for a collapse payload that contains a simple embed tag', () => {
+        const html = '<!--vps:embed:collapse:[{"title":"<!--vps:embed:gallery:1-->","body":"b"}]-->';
+        const placeholders = convertTagsToPlaceholders(html);
+        expect(placeholders.match(/vps-embed-placeholder/g)).toHaveLength(1);
+        expect(placeholders).toContain('collapse (1 item)');
+        expect(convertPlaceholdersToTags(placeholders)).toBe(html);
+    });
+
+    it('returns empty options for malformed word cloud JSON', () => {
+        const [segment] = parseEmbeds('<!--vps:embed:word_cloud:{bad-->');
+        expect(segment).toEqual({kind: 'embed', descriptor: {type: 'word_cloud', options: {}}});
+    });
+
+    it('returns empty options when the word cloud JSON is an array', () => {
+        const [segment] = parseEmbeds('<!--vps:embed:word_cloud:[1,2]-->');
+        expect(segment).toEqual({kind: 'embed', descriptor: {type: 'word_cloud', options: {}}});
+    });
+
+    it('returns empty options for malformed today random JSON', () => {
+        const [segment] = parseEmbeds('<!--vps:embed:today_random:{bad-->');
+        expect(segment).toEqual({kind: 'embed', descriptor: {type: 'today_random', options: {}}});
+    });
+
+    it('returns empty options when the today random JSON is an array', () => {
+        const [segment] = parseEmbeds('<!--vps:embed:today_random:["x"]-->');
+        expect(segment).toEqual({kind: 'embed', descriptor: {type: 'today_random', options: {}}});
+    });
+
+    it('strips comment delimiters from parsed word cloud and today random option values', () => {
+        const [wordCloud] = parseEmbeds('<!--vps:embed:word_cloud:{"shape":"<!star--!>"}-->');
+        expect(wordCloud).toEqual({kind: 'embed', descriptor: {type: 'word_cloud', options: {shape: '<!star'}}});
+        const [todayRandom] = parseEmbeds('<!--vps:embed:today_random:{"title":"a<!--b"}-->');
+        expect(todayRandom).toEqual({kind: 'embed', descriptor: {type: 'today_random', options: {title: 'ab'}}});
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Option sanitising for word cloud and today random tags
+// ---------------------------------------------------------------------------
+describe('buildEmbedTag option sanitising', () => {
+    it('strips the data key from word cloud options at every nesting level', () => {
+        const tag = buildEmbedTag({
+            type: 'word_cloud',
+            options: {
+                data: [{text: 'injected'}],
+                shape: 'circle',
+                layout: {font: 'Impact', data: {x: 1}},
+                colors: ['#fff', '<!--red-->'],
+                nested: {deep: {data: 1, keep: 'x'}},
+                count: 3,
+                flag: null,
+            },
+        });
+        expect(tag).toBe(
+            '<!--vps:embed:word_cloud:{"shape":"circle","layout":{"font":"Impact"},"colors":["#fff","red"],"nested":{"deep":{"keep":"x"}},"count":3,"flag":null}-->',
+        );
+    });
+
+    it('strips arrays of objects inside word cloud options recursively', () => {
+        const tag = buildEmbedTag({
+            type: 'word_cloud',
+            options: {series: [{data: [1], label: 'a-->b'}, ['<!--x', 2]]},
+        });
+        expect(tag).toBe('<!--vps:embed:word_cloud:{"series":[{"label":"ab"},["x",2]]}-->');
+    });
+
+    it('strips images and pages from today random options at every nesting level', () => {
+        const tag = buildEmbedTag({
+            type: 'today_random',
+            options: {
+                title: '<!--T-->',
+                images: [1],
+                pages: [2],
+                extra: {images: [], label: 'x', list: [{pages: 1, n: 2}, 'y<!--']},
+                count: 3,
+                enabled: true,
+            },
+        });
+        expect(tag).toBe('<!--vps:embed:today_random:{"title":"T","extra":{"label":"x","list":[{"n":2},"y"]},"count":3,"enabled":true}-->');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Placeholder labels and conversions for unusual payloads
+// ---------------------------------------------------------------------------
+describe('placeholder labels for malformed payloads', () => {
+    it('falls back to a truncated raw label for a collapse payload with invalid JSON', () => {
+        const placeholder = convertTagsToPlaceholders('<!--vps:embed:collapse:[{bad json}]-->');
+        expect(placeholder).toContain('collapse:[{bad json}]…');
+        expect(placeholder).toContain('data-content="[{bad json}]"');
+    });
+
+    it('falls back to a truncated raw label for a carousel payload with invalid JSON', () => {
+        const longBody = `[{bad json ${'x'.repeat(40)}}]:true:false:500`;
+        const placeholder = convertTagsToPlaceholders(`<!--vps:embed:carousel:${longBody}-->`);
+        expect(placeholder).toContain(`carousel:${longBody.substring(0, 30)}…`);
+    });
+
+    it('labels a carousel without extra params by its item count only', () => {
+        const placeholder = convertTagsToPlaceholders('<!--vps:embed:carousel:[{"title":"a","body":"b"}]-->');
+        expect(placeholder).toContain('carousel (1 item)');
+        expect(placeholder).not.toContain('speed:');
+    });
+
+    it('round-trips a gallery embed that carries extra params', () => {
+        const tag = '<!--vps:embed:gallery:3:foo:bar-->';
+        const placeholder = convertTagsToPlaceholders(tag);
+        expect(placeholder).toContain('data-id="3"');
+        expect(placeholder).toContain('data-extra="foo:bar"');
+        expect(convertPlaceholdersToTags(placeholder)).toBe(tag);
+    });
+
+    it('round-trips a typed hero carousel embed', () => {
+        const tag = buildEmbedTag({type: 'hero', id: 4, heroType: 'carousel', heroDuration: 9, heroTransition: 'fade'});
+        expect(tag).toBe('<!--vps:embed:hero:4:type:carousel:duration:9:transition:fade-->');
+        expect(convertPlaceholdersToTags(convertTagsToPlaceholders(tag))).toBe(tag);
+    });
+});
