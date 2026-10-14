@@ -32,7 +32,7 @@ export const mockDataSets: DataSummaryResponse[] = [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type LooseProviderOverrides = Partial<Record<keyof EmbedDataProviders, (...args: any[]) => any>>;
 
-function buildDefaultProviders(overrides?: LooseProviderOverrides): EmbedDataProviders {
+export function buildDefaultProviders(overrides?: LooseProviderOverrides): EmbedDataProviders {
     return {
         findGalleries: jest.fn<EmbedDataProviders['findGalleries']>().mockResolvedValue({
             content: mockGalleries,

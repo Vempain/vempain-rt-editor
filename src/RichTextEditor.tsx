@@ -52,7 +52,9 @@ import {EmbedDataProvider} from './embeds/EmbedDataContext';
 import type {EmbedDataProviders, HeroEmbedType, HeroTransition} from './types';
 
 function parseHeroEmbedType(value: string | undefined): HeroEmbedType {
-    return value === 'video' || value === 'carousel' ? value : 'image';
+    // The value may carry the carousel options after the type ("carousel:duration:5:transition:slide")
+    const type = value?.split(':')[0];
+    return type === 'video' || type === 'carousel' ? type : 'image';
 }
 
 function parseHeroDuration(value: string | undefined): number {
@@ -547,6 +549,8 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
         linkForm.validateFields().then((values) => {
             insertLink(values.url, values.text);
             setLinkDialogOpen(false);
+        }).catch(() => {
+            // validation failed — stay in dialog
         });
     };
 

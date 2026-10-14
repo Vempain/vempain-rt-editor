@@ -115,6 +115,67 @@ describe('CommonDataSetSelectorModal', () => {
     });
 });
 
+/** Identifiers of the options currently rendered in the open dropdown. */
+function visibleOptionIdentifiers(): string[] {
+    return Array.from(document.querySelectorAll('.ant-select-item-option-content > div:first-child'))
+            .map((element) => element.textContent ?? '');
+}
+
+describe('CommonDataSetSelectorModal search filter', () => {
+    it('filters the options locally by description text', async () => {
+        const user = userEvent.setup();
+        renderWithProviders(<CommonDataSetSelectorModal {...defaultProps}/>);
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+        await user.type(screen.getByRole('combobox'), 'main music');
+
+        await waitFor(() => expect(visibleOptionIdentifiers()).toEqual(['music_library']));
+    });
+
+    it('filters the options locally by data set type', async () => {
+        const user = userEvent.setup();
+        renderWithProviders(<CommonDataSetSelectorModal {...defaultProps}/>);
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+        await user.type(screen.getByRole('combobox'), 'time_series');
+
+        await waitFor(() => expect(visibleOptionIdentifiers()).toEqual(['gps_timeseries_2023', 'gps_timeseries_2024']));
+    });
+
+    it('filters by identifier and ignores items without description or type', async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+                <CommonDataSetSelectorModal {...defaultProps}/>,
+                {
+                    providerOverrides: {
+                        getAllDataSets: jest.fn().mockResolvedValue([
+                            {identifier: 'alpha_set', description: null},
+                            {identifier: 'beta_set', type: 'music', description: 'Second'},
+                        ]),
+                    },
+                },
+        );
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+        await user.type(screen.getByRole('combobox'), 'ALPHA');
+
+        await waitFor(() => expect(visibleOptionIdentifiers()).toEqual(['alpha_set']));
+    });
+
+    it('confirms the identifier chosen from the dropdown', async () => {
+        const onConfirm = jest.fn();
+        renderWithProviders(<CommonDataSetSelectorModal {...defaultProps} onConfirm={onConfirm}/>);
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('combobox'));
+        await userEvent.click(await screen.findByText('Main music library'));
+        await waitFor(() => expect(screen.getByRole('button', {name: /ok/i})).not.toBeDisabled());
+        await userEvent.click(screen.getByRole('button', {name: /ok/i}));
+
+        expect(onConfirm).toHaveBeenCalledWith('music_library');
+    });
+});
+
 describe('RichEmbedGpsTimeSeriesEditor', () => {
     it('shows "Insert GPS Time Series Embed" title', async () => {
         renderWithProviders(

@@ -4,10 +4,20 @@
  */
 import React from 'react';
 import {describe, expect, it, jest} from '@jest/globals';
-import {screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {getNextGalleryPage, handleGalleryPopupScroll, requestNextGalleryPage, RichEmbedGalleryEditor} from '../../embeds/RichEmbedGalleryEditor';
 import {mockGalleries, renderWithProviders} from '../../test-utils/renderWithProviders';
+import type {EmbedDataProviders, GalleryVO, PagedResponse} from '../../types';
+
+/** The dropdown list element of the open antd Select that receives the popup scroll events. */
+function getDropdownListHolder(): HTMLElement {
+    const holder = document.querySelector('.ant-select-dropdown-list-holder');
+    if (!(holder instanceof HTMLElement)) {
+        throw new Error('The select dropdown is not open');
+    }
+    return holder;
+}
 
 describe('RichEmbedGalleryEditor', () => {
     it('renders modal title when open', async () => {
@@ -139,5 +149,100 @@ describe('RichEmbedGalleryEditor', () => {
                 <RichEmbedGalleryEditor open={false} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
         );
         expect(screen.queryByText('Insert Gallery Embed')).not.toBeInTheDocument();
+    });
+
+    it('requests the next page from the popup scroll helper when no request is in progress', () => {
+        const loadPage = jest.fn();
+
+        handleGalleryPopupScroll(100, 100, 100, 0, 2, false, loadPage);
+
+        expect(loadPage).toHaveBeenCalledWith(1);
+    });
+
+    it('loads the next gallery page when the dropdown is scrolled to the bottom', async () => {
+        const page0: PagedResponse<GalleryVO> = {content: [{id: 1, short_name: 'Alpha'}], page: 0, total_pages: 2};
+        const page1: PagedResponse<GalleryVO> = {content: [{id: 2, short_name: 'Beta'}], page: 1, total_pages: 2};
+        const findGalleries = jest.fn<EmbedDataProviders['findGalleries']>()
+                .mockResolvedValueOnce(page0)
+                .mockResolvedValueOnce(page1);
+
+        renderWithProviders(
+                <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
+                {providerOverrides: {findGalleries}},
+        );
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('combobox'));
+        expect(await screen.findByTitle('Alpha')).toBeInTheDocument();
+
+        const list = getDropdownListHolder();
+        Object.defineProperty(list, 'scrollTop', {value: 100, writable: true});
+        Object.defineProperty(list, 'clientHeight', {value: 100, writable: true});
+        Object.defineProperty(list, 'scrollHeight', {value: 100, writable: true});
+        fireEvent.scroll(list);
+
+        await waitFor(() => expect(findGalleries).toHaveBeenCalledTimes(2));
+        expect(findGalleries).toHaveBeenLastCalledWith({
+            page: 1,
+            size: 50,
+            sort_by: 'short_name',
+            direction: 'ASC',
+            search: undefined,
+        });
+        expect(await screen.findByTitle('Beta')).toBeInTheDocument();
+        expect(screen.getByTitle('Alpha')).toBeInTheDocument();
+    });
+
+    it('does not request another page from the dropdown while it is not scrolled to the bottom', async () => {
+        const page0: PagedResponse<GalleryVO> = {content: [{id: 1, short_name: 'Alpha'}], page: 0, total_pages: 2};
+        const findGalleries = jest.fn<EmbedDataProviders['findGalleries']>().mockResolvedValue(page0);
+
+        renderWithProviders(
+                <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
+                {providerOverrides: {findGalleries}},
+        );
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        await userEvent.click(screen.getByRole('combobox'));
+        expect(await screen.findByTitle('Alpha')).toBeInTheDocument();
+
+        const list = getDropdownListHolder();
+        Object.defineProperty(list, 'scrollTop', {value: 0, writable: true});
+        Object.defineProperty(list, 'clientHeight', {value: 100, writable: true});
+        Object.defineProperty(list, 'scrollHeight', {value: 500, writable: true});
+        fireEvent.scroll(list);
+
+        expect(findGalleries).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a response that arrives after a newer request was started', async () => {
+        const resolvers: Array<(value: PagedResponse<GalleryVO>) => void> = [];
+        const findGalleries = jest.fn<EmbedDataProviders['findGalleries']>()
+                .mockImplementation(() => new Promise((resolve) => {
+                    resolvers.push(resolve);
+                }));
+
+        renderWithProviders(
+                <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
+                {providerOverrides: {findGalleries}},
+        );
+        await waitFor(() => expect(findGalleries).toHaveBeenCalledTimes(1));
+
+        // The Spin overlay blocks pointer input while loading, so drive the search input directly
+        fireEvent.change(screen.getByRole('combobox'), {target: {value: 'w'}});
+        await waitFor(() => expect(findGalleries).toHaveBeenCalledTimes(2));
+        expect(findGalleries).toHaveBeenLastCalledWith(expect.objectContaining({search: 'w'}));
+
+        // The stale first response must be dropped, the newer one applied
+        await act(async () => {
+            resolvers[0]({content: [{id: 1, short_name: 'Stale'}], page: 0, total_pages: 1});
+        });
+        await act(async () => {
+            resolvers[1]({content: [{id: 2, short_name: 'Fresh'}], page: 0, total_pages: 1});
+        });
+
+        await userEvent.click(screen.getByRole('combobox'));
+        expect(await screen.findByTitle('Fresh')).toBeInTheDocument();
+        expect(screen.queryByTitle('Stale')).not.toBeInTheDocument();
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
     });
 });
