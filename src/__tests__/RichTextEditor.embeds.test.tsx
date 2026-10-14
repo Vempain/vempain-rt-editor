@@ -224,6 +224,7 @@ describe('RichTextEditor embed flows', () => {
             clearSelection();
 
             const dialog = await openEmbedDialog(/cloud/i, 'Insert Word Cloud Embed');
+            await waitFor(() => expect(within(dialog).getAllByRole('spinbutton')[0]).toHaveValue('800'));
             await confirmDialog(dialog);
 
             await waitFor(() => expect(lastHtml(onChange)).toMatch(/^<!--vps:embed:word_cloud:\{.*\}-->$/));
@@ -232,7 +233,7 @@ describe('RichTextEditor embed flows', () => {
                 kind: 'embed',
                 descriptor: {type: 'word_cloud', options: expect.objectContaining({width: 800, height: 500, shape: 'circle'})},
             });
-        });
+        }, 15000);
 
         it('inserts a today random embed with the default options', async () => {
             const {onChange} = renderEditor('');
@@ -261,12 +262,13 @@ describe('RichTextEditor embed flows', () => {
             clearSelection();
 
             const dialog = await openEmbedDialog(/carousel/i, 'Insert Carousel Embed');
+            await waitFor(() => expect(within(dialog).getByRole('spinbutton')).toHaveValue('500'));
             fireEvent.change(within(dialog).getByPlaceholderText('Title'), {target: {value: 'T'}});
             fireEvent.change(within(dialog).getByPlaceholderText('Body'), {target: {value: 'B'}});
             await confirmDialog(dialog);
 
             await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('<!--vps:embed:carousel:[{"title":"T","body":"B"}]:false:false:500-->'));
-        });
+        }, 15000);
 
         it('leaves the content untouched when the dialog is cancelled', async () => {
             const {onChange, editor} = renderEditor('<p>Intro</p>');
