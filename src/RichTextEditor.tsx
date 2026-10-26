@@ -13,7 +13,7 @@ import {
     type WordCloudEmbedOptions
 } from './tools/embedTools';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Button, Form, Input, Modal, Select, Space, Tooltip} from 'antd';
+import {AutoComplete, Button, Form, Input, Modal, Select, Space, Tooltip} from 'antd';
 import {
     BoldOutlined,
     CalendarOutlined,
@@ -49,13 +49,18 @@ import {
     RichEmbedYoutubeEditor
 } from './embeds';
 import {EmbedDataProvider} from './embeds/EmbedDataContext';
-import type {EmbedDataProviders, HeroEmbedType, HeroTransition} from './types';
+import type {EmbedDataProviders, HeroEmbedType, HeroTransition, InternalLinkTarget} from './types';
 
 function parseHeroEmbedType(value: string | undefined): HeroEmbedType {
     // The value may carry the carousel options after the type ("carousel:duration:5:transition:slide")
     const type = value?.split(':')[0];
     return type === 'video' || type === 'carousel' ? type : 'image';
 }
+
+/** Pause after the last keystroke in the link dialog before the host's findInternalLinks provider is asked. */
+const LINK_SEARCH_DEBOUNCE_MS = 300;
+/** How many internal link targets the link dialog asks for. */
+const LINK_TARGET_LIMIT = 20;
 
 function parseHeroDuration(value: string | undefined): number {
     const match = value?.match(/duration:(\d+)/);
@@ -131,8 +136,72 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
 
     const [embedDialog, setEmbedDialog] = useState<EmbedDialogState>({open: false, type: null});
     const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+    // Internal link suggestions of the link dialog, from the host's findInternalLinks provider
+    const [linkTargets, setLinkTargets] = useState<InternalLinkTarget[]>([]);
+    const linkSearchTimerRef = useRef<number | null>(null);
+    const linkSearchRequestRef = useRef(0);
 
     const [linkForm] = Form.useForm();
+    const findInternalLinks = dataProviders?.findInternalLinks;
+
+    /** Asks the host for the internal link targets matching `search`; a stale answer (an older request) is dropped. */
+    const loadLinkTargets = useCallback((search: string) => {
+        if (!findInternalLinks) {
+            return;
+        }
+        const requestId = ++linkSearchRequestRef.current;
+        findInternalLinks({search, limit: LINK_TARGET_LIMIT})
+                .then((targets) => {
+                    if (requestId === linkSearchRequestRef.current) {
+                        setLinkTargets(Array.isArray(targets) ? targets : []);
+                    }
+                })
+                .catch(() => {
+                    if (requestId === linkSearchRequestRef.current) {
+                        setLinkTargets([]);
+                    }
+                });
+    }, [findInternalLinks]);
+
+    /** The URL field was typed into: look the text up after a short pause, so every keystroke does not hit the backend. */
+    const handleLinkSearch = useCallback((search: string) => {
+        if (linkSearchTimerRef.current !== null) {
+            window.clearTimeout(linkSearchTimerRef.current);
+        }
+        linkSearchTimerRef.current = window.setTimeout(() => {
+            linkSearchTimerRef.current = null;
+            loadLinkTargets(search);
+        }, LINK_SEARCH_DEBOUNCE_MS);
+    }, [loadLinkTargets]);
+
+    const openLinkDialog = useCallback(() => {
+        setLinkTargets([]);
+        setLinkDialogOpen(true);
+        loadLinkTargets('');
+    }, [loadLinkTargets]);
+
+    const closeLinkDialog = useCallback(() => {
+        if (linkSearchTimerRef.current !== null) {
+            window.clearTimeout(linkSearchTimerRef.current);
+            linkSearchTimerRef.current = null;
+        }
+        linkSearchRequestRef.current++;
+        setLinkDialogOpen(false);
+        setLinkTargets([]);
+    }, []);
+
+    /** A suggested target was picked: its href becomes the URL and its label the link text, unless the user already typed one. */
+    const handleLinkTargetSelect = useCallback((href: string) => {
+        const target = linkTargets.find((candidate) => candidate.href === href);
+        const currentText = (linkForm.getFieldValue('text') as string | undefined) ?? '';
+        linkForm.setFieldsValue({url: href, ...(target && currentText.trim() === '' ? {text: target.label} : {})});
+    }, [linkForm, linkTargets]);
+
+    useEffect(() => () => {
+        if (linkSearchTimerRef.current !== null) {
+            window.clearTimeout(linkSearchTimerRef.current);
+        }
+    }, []);
 
     // Report the embeds of the canonical HTML to the host, when it asked for them
     const reportEmbeds = useCallback((html: string) => {
@@ -548,7 +617,7 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
     const handleLinkInsert = () => {
         linkForm.validateFields().then((values) => {
             insertLink(values.url, values.text);
-            setLinkDialogOpen(false);
+            closeLinkDialog();
         }).catch(() => {
             // validation failed — stay in dialog
         });
@@ -812,7 +881,7 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                                         <Button size="small" icon={<LinkOutlined/>} onMouseDown={(e) => {
                                             e.preventDefault();
                                             saveSelection();
-                                            setLinkDialogOpen(true);
+                                            openLinkDialog();
                                         }}/>
                                     </Tooltip>
                                     <Tooltip title="Insert Table (3x3)">
@@ -957,12 +1026,37 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                                         title="Insert Link"
                                         open={linkDialogOpen}
                                         onOk={handleLinkInsert}
-                                        onCancel={() => setLinkDialogOpen(false)}
+                                        onCancel={closeLinkDialog}
                                         destroyOnHidden={true}
                                 >
                                     <Form form={linkForm} layout="vertical">
-                                        <Form.Item name="url" label="URL" rules={[{required: true, message: 'Please enter a URL'}]}>
-                                            <Input placeholder="https://example.com"/>
+                                        <Form.Item
+                                                name="url"
+                                                label="URL"
+                                                rules={[{required: true, message: 'Please enter a URL'}]}
+                                                extra={findInternalLinks ? 'Type to search the published pages and files of the website, or enter any URL' : undefined}
+                                        >
+                                            {findInternalLinks ? (
+                                                    <AutoComplete
+                                                            className="vps-link-target-search"
+                                                            placeholder="https://example.com"
+                                                            options={linkTargets.map((target) => ({
+                                                                value: target.href,
+                                                                label: (
+                                                                        <span className="vps-link-target">
+                                                                            <span className="vps-link-target-label">{target.label}</span>
+                                                                            {target.kind && <span className="vps-link-target-kind"> ({target.kind})</span>}
+                                                                            <span className="vps-link-target-href"> {target.href}</span>
+                                                                        </span>
+                                                                ),
+                                                            }))}
+                                                            onSearch={handleLinkSearch}
+                                                            onSelect={handleLinkTargetSelect}
+                                                            filterOption={false}
+                                                    />
+                                            ) : (
+                                                    <Input placeholder="https://example.com"/>
+                                            )}
                                         </Form.Item>
                                         <Form.Item name="text" label="Link text (optional)">
                                             <Input placeholder="Link text"/>

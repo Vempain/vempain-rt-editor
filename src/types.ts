@@ -86,8 +86,33 @@ export interface DataSetQueryParams {
     search?: string;
 }
 
+/**
+ * A published page or file of the website that content may link to, offered by the link dialog when the host provides
+ * {@link EmbedDataProviders.findInternalLinks}.
+ */
+export interface InternalLinkTarget {
+    /** The href the link gets, for example `/pages/about` or `/file/image/2024/trip/a.jpg`; must be unique in one answer */
+    href: string;
+    /** Shown in the suggestion list; used as the link text when the user typed none */
+    label: string;
+    /** Optional kind shown next to the label, for example `page` or `file` */
+    kind?: string;
+}
+
+export interface InternalLinkQueryParams {
+    /** The text the user typed into the URL field; empty when the dialog opens */
+    search: string;
+    /** How many targets the dialog wants at most */
+    limit?: number;
+}
+
 export interface EmbedDataProviders {
     findGalleries: (params: GalleryQueryParams) => Promise<PagedResponse<GalleryVO>>;
     getPagedSiteFiles: (params: SiteFileQueryParams) => Promise<PagedResponse<SiteFileResponse>>;
     getAllDataSets: (params?: DataSetQueryParams) => Promise<DataSummaryResponse[]>;
+    /**
+     * Internal link targets for the link dialog: the published pages and files whose title or path contain the search text. Optional;
+     * without it the dialog is a plain URL field. The host decides what is offered (only what exists on the website) and builds the hrefs.
+     */
+    findInternalLinks?: (params: InternalLinkQueryParams) => Promise<InternalLinkTarget[]>;
 }

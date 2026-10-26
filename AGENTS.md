@@ -21,6 +21,11 @@
     - site files: `CommonSiteFileSelectorModal.tsx` (image/hero/video/audio)
     - data sets: `CommonDataSetSelectorModal.tsx`
 - Data provider injection path: `RichTextEditor` prop `dataProviders` -> `EmbedDataProvider` context (`src/embeds/EmbedDataContext.tsx`) -> embed dialogs.
+- Internal links: the optional provider `findInternalLinks({search, limit})` (`InternalLinkTarget[]`: `href`, `label`, `kind?`) turns the URL
+  field of the link dialog into an `AutoComplete` (`.vps-link-target-search`) that asks the host when the dialog opens and, debounced
+  (`LINK_SEARCH_DEBOUNCE_MS`), for the typed text; a picked target fills the href and, when the user typed no link text, the label. The
+  editor never decides what may be linked: the host offers only what exists on the website and builds the hrefs. Without the provider the
+  dialog is the plain URL field (`RichTextEditor.links.test.tsx`).
 
 ## Code Patterns Specific to This Repo
 
