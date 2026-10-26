@@ -86,8 +86,15 @@ interface EmbedDataProviders {
             params: Record<string, string | number | boolean | undefined>
     ) => Promise<PagedResponse<SiteFileResponse>>;
     getAllDataSets: (params?: DataSetQueryParams) => Promise<DataSummaryResponse[]>;
+    findInternalLinks?: (params: { search: string; limit?: number }) => Promise<InternalLinkTarget[]>;
 }
 ```
+
+`findInternalLinks` is optional. When it is present the URL field of the link dialog suggests internal targets: the editor calls it with an
+empty search when the dialog opens and again, after a short pause, with whatever the user typed; the host answers with
+`InternalLinkTarget` objects (`href`, `label`, optional `kind` such as `page` or `file`). A picked target becomes the link's href and, when
+the user typed no link text, its label. The host decides what is offered, for example only the pages and files published on the website,
+and builds hrefs the website resolves (the admin frontend uses `/pages/<path>` and `/file/<path>`). Any URL can still be typed by hand.
 
 The expected response shapes are also exported from the package. `GalleryVO` contains `id` and
 `short_name`; `SiteFileResponse` contains `id` and `file_name`; `PagedResponse` contains
@@ -99,6 +106,7 @@ Provider usage by embed selector:
 - Gallery embeds use `findGalleries`.
 - Image, hero, video, and audio embeds use `getPagedSiteFiles`.
 - Music and GPS time-series embeds use `getAllDataSets`.
+- The link dialog uses `findInternalLinks` when the host provides it.
 
 `QueryDetailEnum` values are `MINIMAL`, `UNPOPULATED`, and `FULL`. Keep provider functions stable with `useMemo` or module-level constants when passing them
 from a component.

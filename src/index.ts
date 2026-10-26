@@ -27,6 +27,8 @@ export type {
     EmbedDataProviders,
     GalleryQueryParams,
     GalleryVO,
+    InternalLinkQueryParams,
+    InternalLinkTarget,
     PagedResponse,
     SiteFileQueryParams,
     SiteFileResponse,
