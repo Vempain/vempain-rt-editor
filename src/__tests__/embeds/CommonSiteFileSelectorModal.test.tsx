@@ -54,6 +54,31 @@ describe('CommonSiteFileSelectorModal', () => {
         }
     });
 
+    it('marks a file that was never published with a warning triangle in the list and in the selection', async () => {
+        renderWithProviders(<CommonSiteFileSelectorModal {...defaultProps} initialId={mockSiteFiles[2].id}/>);
+
+        // the never published file is shown twice, in the list row and in the "Selected:" line, and both carry the mark
+        const unpublished = await screen.findAllByText('video-01.mp4');
+        expect(unpublished).toHaveLength(2);
+        for (const element of unpublished) {
+            expect(element.querySelector('.vps-unpublished-warning')).not.toBeNull();
+        }
+        expect(screen.getByText('photo-01.jpg').querySelector('.vps-unpublished-warning')).toBeNull();
+        expect(screen.getByText('photo-02.jpg').querySelector('.vps-unpublished-warning')).toBeNull();
+        expect(document.querySelectorAll('.vps-unpublished-warning')).toHaveLength(2);
+    });
+
+    it('does not mark a published selection', async () => {
+        renderWithProviders(<CommonSiteFileSelectorModal {...defaultProps} initialId={mockSiteFiles[0].id}/>);
+        const published = await screen.findAllByText('photo-01.jpg');
+        expect(published).toHaveLength(2);
+        for (const element of published) {
+            expect(element.querySelector('.vps-unpublished-warning')).toBeNull();
+        }
+        // only the never published list row carries a mark
+        expect(document.querySelectorAll('.vps-unpublished-warning')).toHaveLength(1);
+    });
+
     it('shows the selected label when initialId matches a loaded file', async () => {
         renderWithProviders(
                 <CommonSiteFileSelectorModal {...defaultProps} initialId={mockSiteFiles[0].id}/>,

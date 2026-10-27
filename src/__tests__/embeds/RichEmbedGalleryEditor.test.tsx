@@ -54,6 +54,20 @@ describe('RichEmbedGalleryEditor', () => {
         }
     });
 
+    it('marks a gallery that was never published with a warning triangle and leaves the others unmarked', async () => {
+        renderWithProviders(
+                <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,
+        );
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        await userEvent.click(screen.getByRole('combobox'));
+
+        const unpublished = await screen.findByText('Spring Flowers');
+        expect(unpublished.querySelector('.vps-unpublished-warning')).not.toBeNull();
+        expect(screen.getByText('Summer 2023').querySelector('.vps-unpublished-warning')).toBeNull();
+        expect(screen.getByText('Winter 2024').querySelector('.vps-unpublished-warning')).toBeNull();
+        expect(document.querySelectorAll('.vps-unpublished-warning')).toHaveLength(1);
+    });
+
     it('shows error state when findGalleries rejects (OK button stays disabled)', async () => {
         renderWithProviders(
                 <RichEmbedGalleryEditor open={true} onConfirm={jest.fn()} onCancel={jest.fn()}/>,

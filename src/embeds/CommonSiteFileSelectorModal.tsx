@@ -3,6 +3,7 @@ import {Alert, Input, Modal, Spin} from 'antd';
 import VirtualList from 'rc-virtual-list';
 import {useEmbedDataProviders} from './EmbedDataContext';
 import type {FileTypeEnum, SiteFileResponse} from '../types';
+import {isUnpublished, UnpublishedWarning} from './UnpublishedWarning';
 
 const PAGE_SIZE = 50;
 const FILTER_COLUMN = 'file_name';
@@ -47,10 +48,8 @@ export function CommonSiteFileSelectorModal({
     const loadingMoreRef = useRef(false);
     const searchQueryRef = useRef('');
 
-    const selectedLabel = useMemo(() => {
-        const found = items.find((f) => f.id === selectedId);
-        return found ? found.file_name : selectedId != null ? `#${selectedId}` : undefined;
-    }, [items, selectedId]);
+    const selectedItem = useMemo(() => items.find((f) => f.id === selectedId), [items, selectedId]);
+    const selectedLabel = selectedItem ? selectedItem.file_name : selectedId != null ? `#${selectedId}` : undefined;
 
     const fetchItems = useCallback(async (pageNumber = 0, append = false, query = '') => {
         if (append) {
@@ -137,7 +136,7 @@ export function CommonSiteFileSelectorModal({
                     {extraContent}
                     {selectedLabel && (
                             <div style={{marginBottom: 8}}>
-                                <strong>Selected:</strong> {selectedLabel}
+                                <strong>Selected:</strong> {selectedLabel}{selectedItem && isUnpublished(selectedItem) && <UnpublishedWarning/>}
                             </div>
                     )}
                     <Input.Search
@@ -165,7 +164,7 @@ export function CommonSiteFileSelectorModal({
                                         }}
                                         onClick={() => setSelectedId(item.id)}
                                 >
-                                    {item.file_name}
+                                    {item.file_name}{isUnpublished(item) && <UnpublishedWarning/>}
                                 </div>
                         )}
                     </VirtualList>

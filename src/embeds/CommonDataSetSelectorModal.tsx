@@ -2,6 +2,7 @@ import {Alert, Modal, Select, Spin} from 'antd';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {DataSummaryResponse} from '../types';
 import {useEmbedDataProviders} from './EmbedDataContext';
+import {isUnpublished, UnpublishedWarning} from './UnpublishedWarning';
 
 interface CommonDataSetSelectorModalProps {
     open: boolean;
@@ -77,10 +78,8 @@ export function CommonDataSetSelectorModal({
         });
     }, [items, searchQuery]);
 
-    const selectedLabel = useMemo(() => {
-        const found = items.find((item) => item.identifier === selectedIdentifier);
-        return found ? `${found.identifier}${found.description ? ` — ${found.description}` : ''}` : selectedIdentifier;
-    }, [items, selectedIdentifier]);
+    const selectedItem = useMemo(() => items.find((item) => item.identifier === selectedIdentifier), [items, selectedIdentifier]);
+    const selectedLabel = selectedItem ? `${selectedItem.identifier}${selectedItem.description ? ` — ${selectedItem.description}` : ''}` : selectedIdentifier;
 
     return (
             <Modal
@@ -95,35 +94,32 @@ export function CommonDataSetSelectorModal({
                     {loadError && <Alert type="error" title={loadError} style={{marginBottom: 8}}/>}
                     {selectedLabel && (
                             <div style={{marginBottom: 8}}>
-                                <strong>Selected:</strong> {selectedLabel}
+                                <strong>Selected:</strong> {selectedLabel}{selectedItem && isUnpublished(selectedItem) && <UnpublishedWarning/>}
                             </div>
                     )}
                     <Select
                             value={selectedIdentifier}
                             onChange={setSelectedIdentifier}
-                            showSearch
-                            searchValue={searchQuery}
-                            onSearch={setSearchQuery}
-                            filterOption={false}
+                            showSearch={{searchValue: searchQuery, onSearch: setSearchQuery, filterOption: false}}
                             style={{width: '100%'}}
                             placeholder={searchPlaceholder}
                             disabled={loadError != null}
                             notFoundContent={!loading ? emptyText : null}
-                            optionLabelProp="label"
-                    >
-                        {filteredItems.map((item) => (
-                                <Select.Option
-                                        key={item.identifier}
-                                        value={item.identifier}
-                                        label={item.identifier}
-                                >
-                                    <div>{item.identifier}</div>
-                                    {item.description && (
-                                            <div style={{fontSize: '0.85em', color: '#999'}}>{item.description}</div>
-                                    )}
-                                </Select.Option>
-                        ))}
-                    </Select>
+                            options={filteredItems.map((item) => ({
+                                value: item.identifier,
+                                label: item.identifier,
+                                description: item.description,
+                                unpublished: isUnpublished(item),
+                            }))}
+                            optionRender={(option) => (
+                                    <>
+                                        <div>{option.data.label}{option.data.unpublished && <UnpublishedWarning/>}</div>
+                                        {option.data.description && (
+                                                <div style={{fontSize: '0.85em', color: '#999'}}>{option.data.description}</div>
+                                        )}
+                                    </>
+                            )}
+                    />
                 </Spin>
             </Modal>
     );

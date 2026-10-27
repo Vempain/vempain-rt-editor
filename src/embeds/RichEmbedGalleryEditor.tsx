@@ -2,6 +2,7 @@ import {type ReactNode, useCallback, useEffect, useRef, useState} from 'react';
 import {Alert, Modal, Select, Spin} from 'antd';
 import type {GalleryVO} from '../types';
 import {useEmbedDataProviders} from './EmbedDataContext';
+import {isUnpublished, UnpublishedWarning} from './UnpublishedWarning';
 
 interface RichEmbedGalleryEditorProps {
     open: boolean;
@@ -125,10 +126,13 @@ export function RichEmbedGalleryEditor({open, initialId, onConfirm, onCancel, ex
                     <Select
                             value={selectedId}
                             onChange={setSelectedId}
-                            options={galleries.map(g => ({label: g.short_name, value: g.id}))}
-                            showSearch
-                            filterOption={false}
-                            onSearch={handleSearch}
+                            options={galleries.map(g => ({
+                                // the title keeps the plain name on the option element, the label adds the mark of a never published gallery
+                                title: g.short_name,
+                                label: <span>{g.short_name}{isUnpublished(g) && <UnpublishedWarning/>}</span>,
+                                value: g.id,
+                            }))}
+                            showSearch={{filterOption: false, onSearch: handleSearch}}
                             onPopupScroll={(event) => handleGalleryPopupScroll(
                                     event.currentTarget.scrollTop,
                                     event.currentTarget.clientHeight,

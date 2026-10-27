@@ -20,7 +20,19 @@
 - Embed dialogs are split by type under `src/embeds/`; many are thin wrappers over shared selectors:
     - site files: `CommonSiteFileSelectorModal.tsx` (image/hero/video/audio)
     - data sets: `CommonDataSetSelectorModal.tsx`
+- Unpublished resources: `GalleryVO`, `SiteFileResponse` and `DataSummaryResponse` carry the optional `published` timestamp of the admin
+  database (`PublishedTimestamp`). The gallery, site file and data set dialogs show `UnpublishedWarning` (`src/embeds/UnpublishedWarning.tsx`,
+  `.vps-unpublished-warning`, a tooltip "Not yet published to the website") next to the label and the "Selected:" line of every resource
+  whose `published` is explicitly `null`; an absent field means the host does not know and shows no mark (`isUnpublished`). The editor
+  never blocks the insert, it only warns. The link dialog needs no mark: its targets come from the site database and are published by
+  definition.
 - Data provider injection path: `RichTextEditor` prop `dataProviders` -> `EmbedDataProvider` context (`src/embeds/EmbedDataContext.tsx`) -> embed dialogs.
+- Page style preview: the optional `pageStyle` prop is the custom CSS of the page being edited (`page_style` of the admin page). The
+  canvas (the contentEditable div, also in read-only mode) carries `PAGE_CANVAS_CLASS` (`vps-page-canvas`, the class of the website's page
+  canvas) plus a per-instance scope class, and the CSS is rendered in a `<style data-testid="vps-page-style">` wrapped in
+  `@scope (.<scope class>)` so the host application is never restyled (`src/tools/pageStyleTools.ts`: `sanitizePageStyle` trims and
+  neutralises `</style`, `scopePageStyle` wraps). Site-wide rules (`:root {...}`) therefore show no effect in the preview, only on the
+  website. The helpers and the class are exported for hosts.
 - Internal links: the optional provider `findInternalLinks({search, limit})` (`InternalLinkTarget[]`: `href`, `label`, `kind?`) turns the URL
   field of the link dialog into an `AutoComplete` (`.vps-link-target-search`) that asks the host when the dialog opens and, debounced
   (`LINK_SEARCH_DEBOUNCE_MS`), for the typed text; a picked target fills the href and, when the user typed no link text, the label. The
@@ -53,6 +65,8 @@
 - All tasks must always be validated by running the test suite, coverage and linting before pushing commits or creating pull requests. Use `yarn test`,
   `yarn test:coverage` and `yarn lint` for this purpose. If you want to automatically fix linting issues, you can use `yarn lint:fix`. All errors and warnings
   must be resolved before the task can be considered complete.
+- `yarn lint` is type-aware (`parserOptions.projectService`) and fails on `@typescript-eslint/no-deprecated`: any use of functionality that the type
+  declarations mark `@deprecated` (Ant Design props, DOM or library APIs) must be replaced by the documented successor. CI runs it before the build.
 - Treat all deprecation warnings as required maintenance work: whenever `yarn test`, `yarn test:coverage`, `yarn lint`, or build output reports deprecated
   APIs/props/behavior, update the implementation and tests immediately so no deprecation warnings remain (same rule as in `vempain-rt-renderer`).
 - Do not add TypeScript `enum`; use `as const` objects like the other Vempain frontends.
