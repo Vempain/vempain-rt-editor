@@ -12,7 +12,7 @@ import {
     type TodayRandomEmbedOptions,
     type WordCloudEmbedOptions
 } from './tools/embedTools';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useId, useRef, useState} from 'react';
 import {AutoComplete, Button, Form, Input, Modal, Select, Space, Tooltip} from 'antd';
 import {
     BoldOutlined,
@@ -50,6 +50,7 @@ import {
 } from './embeds';
 import {EmbedDataProvider} from './embeds/EmbedDataContext';
 import type {EmbedDataProviders, HeroEmbedType, HeroTransition, InternalLinkTarget} from './types';
+import {PAGE_CANVAS_CLASS, sanitizePageStyle, scopePageStyle} from './tools/pageStyleTools';
 
 function parseHeroEmbedType(value: string | undefined): HeroEmbedType {
     // The value may carry the carousel options after the type ("carousel:duration:5:transition:slide")
@@ -85,6 +86,12 @@ export interface RichTextEditorProps {
     readOnly?: boolean;
     /** Data provider callbacks for embed selectors */
     dataProviders?: Partial<EmbedDataProviders>;
+    /**
+     * The custom CSS of the page being edited (the page's `page_style`), previewed on the editing canvas: the canvas carries the
+     * `vps-page-canvas` class the website's page canvas has, and the rules are scoped to it (`@scope`) so the host application is
+     * never restyled. Null, undefined or blank previews nothing.
+     */
+    pageStyle?: string | null;
 }
 
 interface EmbedDialogState {
@@ -123,7 +130,7 @@ interface EmbedDialogState {
  * - Toggle between WYSIWYG and HTML source view
  * - Click-to-edit for existing embed placeholders
  */
-export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = false, dataProviders}: RichTextEditorProps) {
+export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = false, dataProviders, pageStyle}: RichTextEditorProps) {
     const editorRef = useRef<HTMLDivElement>(null);
     const [sourceMode, setSourceMode] = useState(false);
     const [sourceValue, setSourceValue] = useState(value || '');
@@ -133,6 +140,10 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
     const editingPlaceholderRef = useRef<HTMLElement | null>(null);
     // Saved selection range so we can restore cursor position after a modal closes
     const savedRangeRef = useRef<Range | null>(null);
+
+    // The page's own CSS is previewed on the canvas only: scoped to this editor instance's canvas class
+    const canvasScopeClass = `${PAGE_CANVAS_CLASS}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+    const previewStyle = sanitizePageStyle(pageStyle);
 
     const [embedDialog, setEmbedDialog] = useState<EmbedDialogState>({open: false, type: null});
     const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -999,6 +1010,7 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                         ...editorContainerStyle,
                         ...(readOnly ? {borderRadius: '4px'} : {}),
                     }}>
+                        {previewStyle && <style data-testid="vps-page-style">{scopePageStyle(previewStyle, canvasScopeClass)}</style>}
                         {sourceMode && !readOnly ? (
                                 <textarea
                                         style={sourceStyle}
@@ -1008,6 +1020,7 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                         ) : (
                                 <div
                                         ref={editorRef}
+                                        className={`${PAGE_CANVAS_CLASS} ${canvasScopeClass}`}
                                         contentEditable={!readOnly}
                                         suppressContentEditableWarning={true}
                                         style={editorStyle}
@@ -1050,9 +1063,8 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                                                                         </span>
                                                                 ),
                                                             }))}
-                                                            onSearch={handleLinkSearch}
+                                                            showSearch={{onSearch: handleLinkSearch, filterOption: false}}
                                                             onSelect={handleLinkTargetSelect}
-                                                            filterOption={false}
                                                     />
                                             ) : (
                                                     <Input placeholder="https://example.com"/>

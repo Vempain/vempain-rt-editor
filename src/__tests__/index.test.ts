@@ -27,6 +27,7 @@ describe('library entry point', () => {
     it('exposes exactly the documented runtime exports', () => {
         expect(Object.keys(library).sort()).toEqual([
             'FileTypeEnum',
+            'PAGE_CANVAS_CLASS',
             'QueryDetailEnum',
             'RichTextEditor',
             'buildCarouselTag',
@@ -35,6 +36,8 @@ describe('library entry point', () => {
             'convertTagsToPlaceholders',
             'parseCarouselParams',
             'parseEmbeds',
+            'sanitizePageStyle',
+            'scopePageStyle',
         ]);
     });
 });

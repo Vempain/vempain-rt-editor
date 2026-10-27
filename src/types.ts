@@ -40,20 +40,30 @@ export const HeroTransition = {
 
 export type HeroTransition = (typeof HeroTransition)[keyof typeof HeroTransition];
 
+/**
+ * When the resource was last published to the website: `null` when it never was (the embed dialogs then mark it with a warning
+ * triangle, see `UnpublishedWarning`), a timestamp when it was (an ISO string as received, or a Date or Day.js value the host parsed it
+ * into; only the null check matters here), and absent when the host does not know, which shows no mark.
+ */
+export type PublishedTimestamp = string | Date | { toISOString(): string } | null;
+
 export interface GalleryVO {
     id: number;
     short_name: string;
+    published?: PublishedTimestamp;
 }
 
 export interface SiteFileResponse {
     id: number;
     file_name: string;
+    published?: PublishedTimestamp;
 }
 
 export interface DataSummaryResponse {
     identifier: string;
     type?: string;
     description?: string | null;
+    published?: PublishedTimestamp;
 }
 
 export interface PagedResponse<T> {

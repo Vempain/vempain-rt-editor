@@ -61,6 +61,23 @@ describe('CommonDataSetSelectorModal', () => {
         expect(await screen.findByRole('combobox')).toBeInTheDocument();
     });
 
+    it('marks a data set that was never published with a warning triangle in the options and in the selection', async () => {
+        renderWithProviders(<CommonDataSetSelectorModal {...defaultProps} initialIdentifier="music_library"/>);
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+        // the "Selected:" line of the never published data set carries the mark
+        expect(document.querySelectorAll('.vps-unpublished-warning')).toHaveLength(1);
+
+        await userEvent.click(screen.getByRole('combobox'));
+        const options = await screen.findAllByText('music_library');
+        expect(options.some((element) => element.querySelector('.vps-unpublished-warning') !== null)).toBe(true);
+        // Ant Design renders an option both in the list and in its accessibility list, none of the published ones is marked
+        for (const identifier of ['gps_timeseries_2023', 'gps_timeseries_2024']) {
+            for (const element of screen.getAllByText(identifier)) {
+                expect(element.querySelector('.vps-unpublished-warning')).toBeNull();
+            }
+        }
+    });
+
     it('shows error alert when getAllDataSets rejects', async () => {
         renderWithProviders(
                 <CommonDataSetSelectorModal {...defaultProps}/>,

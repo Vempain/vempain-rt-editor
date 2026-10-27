@@ -55,13 +55,14 @@ export function PageBodyEditor({body, saveBody}: { body: string; saveBody: (body
 
 `RichTextEditor` props:
 
-| Prop             | Type                                  | Meaning                                                                                                                                                                                                                                           |
-|------------------|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `value`          | `string \| undefined`                 | Canonical HTML content. Embed tags are stored as HTML comments.                                                                                                                                                                                   |
-| `onChange`       | `(value: string) => void`             | Called whenever the content changes; persist this string, not the rendered placeholder DOM.                                                                                                                                                       |
-| `onEmbedsChange` | `(embeds: EmbedDescriptor[]) => void` | Called with the embeds of the canonical content, in document order, whenever the content changes and once when a `value` arrives from outside (mount, form reset). Lets the host derive data from the embeds without parsing the HTML; see below. |
-| `readOnly`       | `boolean`                             | Hides editing controls and makes the editor non-editable. Defaults to `false`.                                                                                                                                                                    |
-| `dataProviders`  | `Partial<EmbedDataProviders>`         | Host callbacks used by embed selector dialogs.                                                                                                                                                                                                    |
+| Prop             | Type                                  | Meaning                                                                                                                                                                                                                                                                    |
+|------------------|---------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `value`          | `string \| undefined`                 | Canonical HTML content. Embed tags are stored as HTML comments.                                                                                                                                                                                                            |
+| `onChange`       | `(value: string) => void`             | Called whenever the content changes; persist this string, not the rendered placeholder DOM.                                                                                                                                                                                |
+| `onEmbedsChange` | `(embeds: EmbedDescriptor[]) => void` | Called with the embeds of the canonical content, in document order, whenever the content changes and once when a `value` arrives from outside (mount, form reset). Lets the host derive data from the embeds without parsing the HTML; see below.                          |
+| `readOnly`       | `boolean`                             | Hides editing controls and makes the editor non-editable. Defaults to `false`.                                                                                                                                                                                             |
+| `pageStyle`      | `string \| null`                      | The custom CSS of the page being edited. Previewed on the editing canvas only: the canvas carries the `vps-page-canvas` class of the website's page canvas and the rules are scoped to it with `@scope`, so the host UI is never restyled. Blank or null previews nothing. |
+| `dataProviders`  | `Partial<EmbedDataProviders>`         | Host callbacks used by embed selector dialogs.                                                                                                                                                                                                                             |
 
 `onEmbedsChange` is the hook for host-side bookkeeping that depends on the embeds, for example the list of galleries a page depends on. The
 editor itself knows nothing about such relations: it reports every embed (`gallery`, `image`, `hero` with its `heroType`, …) and the host
@@ -98,7 +99,10 @@ and builds hrefs the website resolves (the admin frontend uses `/pages/<path>` a
 
 The expected response shapes are also exported from the package. `GalleryVO` contains `id` and
 `short_name`; `SiteFileResponse` contains `id` and `file_name`; `PagedResponse` contains
-`content`, `page`, and `total_pages`; and `DataSummaryResponse` contains `identifier` plus optional `type` and `description`. Adapt the callbacks to the host
+`content`, `page`, and `total_pages`; and `DataSummaryResponse` contains `identifier` plus optional `type` and `description`.
+All three resource shapes accept an optional `published` timestamp (`PublishedTimestamp`, `string | null`): send the "last published to
+the website" column of your database and the dialogs mark every resource whose value is `null` with a warning triangle ("Not yet
+published to the website"); leave the field out when you do not track it and nothing is marked. Adapt the callbacks to the host
 API's naming and response shape at this boundary.
 
 Provider usage by embed selector:

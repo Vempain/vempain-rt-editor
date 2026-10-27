@@ -30,6 +30,7 @@ export type {
     InternalLinkQueryParams,
     InternalLinkTarget,
     PagedResponse,
+    PublishedTimestamp,
     SiteFileQueryParams,
     SiteFileResponse,
     HeroEmbedType,
@@ -37,3 +38,5 @@ export type {
 } from './types';
 
 export {FileTypeEnum, QueryDetailEnum} from './types';
+
+export {PAGE_CANVAS_CLASS, sanitizePageStyle, scopePageStyle} from './tools/pageStyleTools';
