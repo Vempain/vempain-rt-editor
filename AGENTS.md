@@ -33,6 +33,16 @@
   `@scope (.<scope class>)` so the host application is never restyled (`src/tools/pageStyleTools.ts`: `sanitizePageStyle` trims and
   neutralises `</style`, `scopePageStyle` wraps). Site-wide rules (`:root {...}`) therefore show no effect in the preview, only on the
   website. The helpers and the class are exported for hosts.
+- Page style editing: `PageStyleEditor` (`src/PageStyleEditor.tsx`) is the field a host puts next to the editor for the page's CSS
+  (`value` + `onChange(css)`, antd `Form.Item` compatible). A `Segmented` switch offers "CSS" (the text as stored) and "Visual": the CSS
+  parsed into blocks by `src/tools/pageStyleModel.ts` (`parsePageStyle`: plain `selector { declarations }` rules become cards, comments,
+  at-rules, nested rules and malformed text stay verbatim raw blocks in their position; `serializePageStyle` writes the rules back with
+  four-space indentation and keeps the raw blocks). The selector is an `AutoComplete` over `PAGE_STYLE_SELECTORS` (the canvas, `:root`,
+  the elements the editor produces, the embed containers), every property over `PAGE_STYLE_PROPERTIES` with the control of its
+  `controlFor` kind (`color`: antd `ColorPicker` plus text, `choice`: `AutoComplete` with the catalog's values, `length`/`text`: `Input`);
+  anything may still be typed. Rows of the visual mode are kept in component state until the `value` changes to something the editor did
+  not emit itself (a loaded page), so empty rows survive edits. Tests: `src/__tests__/PageStyleEditor.test.tsx`,
+  `src/__tests__/tools/pageStyleModel.test.ts`.
 - Internal links: the optional provider `findInternalLinks({search, limit})` (`InternalLinkTarget[]`: `href`, `label`, `kind?`) turns the URL
   field of the link dialog into an `AutoComplete` (`.vps-link-target-search`) that asks the host when the dialog opens and, debounced
   (`LINK_SEARCH_DEBOUNCE_MS`), for the typed text; a picked target fills the href and, when the user typed no link text, the label. The
