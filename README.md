@@ -31,6 +31,21 @@ The optional `onEmbedsChange` prop receives the `EmbedDescriptor` list of the ca
 per value supplied from outside. Hosts use it for bookkeeping that follows the embeds, such as the galleries a page links to, instead of parsing the HTML
 themselves.
 
+## Page style editing
+
+`PageStyleEditor` edits the custom CSS of a page (the string the host previews through the editor's `pageStyle` prop). It is a controlled
+field (`value`, `onChange(css)`) with two modes the author switches between: the CSS text, and a visual mode that lists the rules as
+cards where the element is picked from the CSS elements of a page (`.vps-page-canvas`, headings, paragraphs, links, lists, tables, images,
+the embed containers, `:root` for the website's variables) and every property gets a fitting control (colour picker, value lists, text).
+Comments, `@media` and other at-rules and nested rules are kept as written and edited in CSS mode.
+
+```tsx
+import {PageStyleEditor, RichTextEditor} from '@vempain/vempain-rt-editor';
+
+<RichTextEditor value={body} onChange={setBody} pageStyle={pageStyle}/>
+<PageStyleEditor value={pageStyle} onChange={setPageStyle}/>
+```
+
 ## Scripts
 
 - `yarn build` - Build TS output to `dist/`

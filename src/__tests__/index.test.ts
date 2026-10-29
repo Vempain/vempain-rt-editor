@@ -28,16 +28,24 @@ describe('library entry point', () => {
         expect(Object.keys(library).sort()).toEqual([
             'FileTypeEnum',
             'PAGE_CANVAS_CLASS',
+            'PAGE_STYLE_PROPERTIES',
+            'PAGE_STYLE_SELECTORS',
+            'PageStyleEditor',
             'QueryDetailEnum',
             'RichTextEditor',
             'buildCarouselTag',
             'buildEmbedTag',
+            'controlFor',
             'convertPlaceholdersToTags',
             'convertTagsToPlaceholders',
+            'findStyleProperty',
+            'newRuleBlock',
             'parseCarouselParams',
             'parseEmbeds',
+            'parsePageStyle',
             'sanitizePageStyle',
             'scopePageStyle',
+            'serializePageStyle',
         ]);
     });
 });
