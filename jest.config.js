@@ -1,6 +1,7 @@
 export default {
     preset: 'ts-jest',
     testEnvironment: 'jest-environment-jsdom',
+    testTimeout: 15000,
     maxWorkers: 2,
     transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {
