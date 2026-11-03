@@ -17,6 +17,15 @@
 - Canonical content is embed-comment HTML (for example `<!--vps:embed:gallery:7-->`), not placeholder spans.
 - WYSIWYG mode uses placeholder spans via `convertTagsToPlaceholders`; source mode edits raw HTML directly.
 - Conversion/parsing rules live in `src/tools/embedTools.ts`; keep UI placeholder behavior aligned with parser behavior.
+- Formatting commands live in `src/tools/formatTools.ts`, pure DOM Range code the toolbar calls. Inline formats *toggle*: a selection whose
+  text is formatted throughout (`isRangeFormatted`, `<strong>`/`<em>`/`<strike>`/`<del>` count as their short tags) loses the format, with
+  the formatting element split around the selection when needed; any other selection gets it once, with formatting already inside it
+  absorbed, never nested twice (`toggleInlineFormat`). The affected text stays selected so the next click toggles back; a caret inside
+  the format is a no-op, a caret elsewhere gets an empty element to type into. Block formats apply to every block the selection touches
+  (`applyBlockFormat`): a `p`/heading is renamed with its nodes moved (the selection stays valid), text directly in the editor root is
+  wrapped with the rest of its line (up to a block or `<br>`), and a list item keeps its `li` with the heading inside. The toolbar's format
+  selector is controlled by `currentBlockFormat` of the selection (`selectionchange`, mouse up, key up). Tests:
+  `src/__tests__/tools/formatTools.test.ts` and the inline/block sections of `src/__tests__/RichTextEditor.commands.test.tsx`.
 - Embed dialogs are split by type under `src/embeds/`; many are thin wrappers over shared selectors:
     - site files: `CommonSiteFileSelectorModal.tsx` (image/hero/video/audio)
     - data sets: `CommonDataSetSelectorModal.tsx`

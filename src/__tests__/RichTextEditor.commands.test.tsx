@@ -131,7 +131,7 @@ describe('RichTextEditor editing commands', () => {
     // Inline formatting (b / i / u / s)
     // -----------------------------------------------------------------------
     describe('inline formatting', () => {
-        it('wraps the selected text in <b>', () => {
+        it('wraps the selected text in <b> and keeps it selected', () => {
             const {onChange, editor} = renderEditor('<p>Hello world</p>');
             const text = firstText(editor, 'p');
             setSelection(text, 0, text, 5);
@@ -139,9 +139,51 @@ describe('RichTextEditor editing commands', () => {
             pressToolbar(/bold/i);
 
             expect(onChange).toHaveBeenLastCalledWith('<p><b>Hello</b> world</p>');
-            const range = currentRange();
-            expect(range?.collapsed).toBe(true);
-            expect(range?.startContainer).toBe(editor.querySelector('p'));
+            expect(currentRange()?.toString()).toBe('Hello');
+        });
+
+        it('removes the bold from a selected bold text instead of nesting another <b>', () => {
+            const {onChange, editor} = renderEditor('<p>Hello <b>big</b> world</p>');
+            const bold = firstText(editor, 'b');
+            setSelection(bold, 0, bold, 3);
+
+            pressToolbar(/bold/i);
+
+            expect(onChange).toHaveBeenLastCalledWith('<p>Hello big world</p>');
+            expect(currentRange()?.toString()).toBe('big');
+        });
+
+        it('toggles the format back and forth with repeated clicks', () => {
+            const {onChange, editor} = renderEditor('<p>Hello</p>');
+            const text = firstText(editor, 'p');
+            setSelection(text, 0, text, 5);
+
+            pressToolbar(/bold/i);
+            expect(onChange).toHaveBeenLastCalledWith('<p><b>Hello</b></p>');
+            pressToolbar(/bold/i);
+            expect(onChange).toHaveBeenLastCalledWith('<p>Hello</p>');
+            pressToolbar(/bold/i);
+            expect(onChange).toHaveBeenLastCalledWith('<p><b>Hello</b></p>');
+        });
+
+        it('takes a selection out of the middle of a bold run, leaving the rest bold', () => {
+            const {onChange, editor} = renderEditor('<p><strong>Hello big world</strong></p>');
+            const strong = firstText(editor, 'strong');
+            setSelection(strong, 6, strong, 9);
+
+            pressToolbar(/bold/i);
+
+            expect(onChange).toHaveBeenLastCalledWith('<p><strong>Hello </strong>big<strong> world</strong></p>');
+        });
+
+        it('does not insert an empty element at a caret that already sits in the format', () => {
+            const {onChange, editor} = renderEditor('<p><b>Hello</b></p>');
+            placeCaret(firstText(editor, 'b'), 2);
+
+            pressToolbar(/bold/i);
+
+            expect(editor.innerHTML).toBe('<p><b>Hello</b></p>');
+            expect(onChange.mock.calls.some(([html]) => (html as string).includes('\u200b'))).toBe(false);
         });
 
         it('inserts an empty <i> with a zero-width space at a collapsed caret and puts the caret inside it', () => {
@@ -178,13 +220,23 @@ describe('RichTextEditor editing commands', () => {
 
             expect(onChange).toHaveBeenLastCalledWith('<p>He<s>llo <i>big</i> wo</s>rld</p>');
         });
+
+        it('formats a selection that is only partly bold once, absorbing the inner bold', () => {
+            const {onChange, editor} = renderEditor('<p>plain <b>bold</b> plain</p>');
+            const paragraph = editor.querySelector('p') as HTMLElement;
+            setSelection(paragraph.firstChild as Text, 0, paragraph.lastChild as Text, 6);
+
+            pressToolbar(/bold/i);
+
+            expect(onChange).toHaveBeenLastCalledWith('<p><b>plain bold plain</b></p>');
+        });
     });
 
     // -----------------------------------------------------------------------
     // Block formats (headings / paragraphs)
     // -----------------------------------------------------------------------
     describe('block formats', () => {
-        it('turns the current paragraph into a heading and leaves the caret at its end', async () => {
+        it('turns the current paragraph into a heading and keeps the caret where it was', async () => {
             const {onChange, editor} = renderEditor('<p>Hello</p>');
 
             await chooseBlockFormat('H2', () => placeCaret(firstText(editor, 'p'), 1));
@@ -192,7 +244,22 @@ describe('RichTextEditor editing commands', () => {
             expect(onChange).toHaveBeenLastCalledWith('<h2>Hello</h2>');
             const range = currentRange();
             expect(range?.collapsed).toBe(true);
-            expect(range?.startContainer).toBe(editor.querySelector('h2'));
+            expect(range?.startContainer).toBe(firstText(editor, 'h2'));
+            expect(range?.startOffset).toBe(1);
+            // the format selector follows the selection
+            await waitFor(() => expect(screen.getByRole('combobox').closest('.ant-select')?.textContent).toContain('H2'));
+        });
+
+        it('formats every paragraph of a selection that spans several blocks', async () => {
+            const {onChange, editor} = renderEditor('<p>one</p><p>two</p><p>three</p>');
+
+            await chooseBlockFormat('H3', () => {
+                const paragraphs = editor.querySelectorAll('p');
+                setSelection(paragraphs[0].firstChild as Text, 1, paragraphs[1].firstChild as Text, 2);
+            });
+
+            expect(onChange).toHaveBeenLastCalledWith('<h3>one</h3><h3>two</h3><p>three</p>');
+            expect(currentRange()?.toString()).toBe('netw');
         });
 
         it('finds the block through nested inline elements', async () => {
@@ -203,12 +270,16 @@ describe('RichTextEditor editing commands', () => {
             expect(onChange).toHaveBeenLastCalledWith('<h3><b>Hi</b></h3>');
         });
 
-        it('inserts an empty block when the caret sits directly in the editor root', async () => {
-            const {onChange, editor} = renderEditor('Hello');
+        it('wraps text that sits directly in the editor root into the block, with the rest of its line', async () => {
+            const {onChange, editor} = renderEditor('Hello <b>big</b> world<br>next');
 
-            await chooseBlockFormat('H1', () => placeCaret(firstText(editor), 2));
+            await chooseBlockFormat('H1', () => {
+                const text = firstText(editor);
+                setSelection(text, 0, text, 5);
+            });
 
-            expect(onChange).toHaveBeenLastCalledWith('He<h1></h1>llo');
+            expect(onChange).toHaveBeenLastCalledWith('<h1>Hello <b>big</b> world</h1><br>next');
+            expect(currentRange()?.toString()).toBe('Hello');
         });
 
         it('leaves a block alone that already has the requested tag', async () => {
