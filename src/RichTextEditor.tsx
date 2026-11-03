@@ -12,6 +12,15 @@ import {
     type TodayRandomEmbedOptions,
     type WordCloudEmbedOptions
 } from './tools/embedTools';
+import {
+    applyBlockFormat,
+    blockElementOf,
+    closestInlineFormat,
+    currentBlockFormat,
+    DEFAULT_BLOCK_FORMAT,
+    type InlineFormat,
+    toggleInlineFormat,
+} from './tools/formatTools';
 import React, {useCallback, useEffect, useId, useRef, useState} from 'react';
 import {AutoComplete, Button, Form, Input, Modal, Select, Space, Tooltip} from 'antd';
 import {
@@ -130,6 +139,12 @@ interface EmbedDialogState {
  * - Toggle between WYSIWYG and HTML source view
  * - Click-to-edit for existing embed placeholders
  */
+
+/** The number of child nodes of an element, or the length of a text node: the largest valid range offset inside it */
+function lengthOf(node: Node): number {
+    return node instanceof Text ? node.length : node.childNodes.length;
+}
+
 export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = false, dataProviders, pageStyle}: RichTextEditorProps) {
     const editorRef = useRef<HTMLDivElement>(null);
     const [sourceMode, setSourceMode] = useState(false);
@@ -316,16 +331,25 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
         }
     }, []);
 
-    const wrapSelectionWithTag = useCallback((tagName: 'b' | 'i' | 'u' | 's') => {
+    /**
+     * Toggles an inline format on the selection: formatted text loses it, other text gets it (see `toggleInlineFormat`). The affected
+     * text stays selected, so clicking the button again toggles it back. A caret gets an empty element to type into, unless it already
+     * sits inside that format.
+     */
+    const wrapSelectionWithTag = useCallback((tagName: InlineFormat) => {
         withEditorRange((range) => {
-            const wrapper = document.createElement(tagName);
+            const root = editorRef.current as HTMLElement;
+            const sel = window.getSelection();
             if (range.collapsed) {
+                if (closestInlineFormat(range.startContainer, tagName, root)) {
+                    return;
+                }
+                const wrapper = document.createElement(tagName);
                 wrapper.appendChild(document.createTextNode('\u200b'));
                 range.insertNode(wrapper);
                 const caret = document.createRange();
                 caret.setStart(wrapper.firstChild as Node, 1);
                 caret.collapse(true);
-                const sel = window.getSelection();
                 if (sel) {
                     sel.removeAllRanges();
                     sel.addRange(caret);
@@ -333,58 +357,63 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                 return;
             }
 
-            const content = range.extractContents();
-            wrapper.appendChild(content);
-            range.insertNode(wrapper);
-            const sel = window.getSelection();
+            const selected = toggleInlineFormat(range, tagName, root);
             if (sel) {
-                const after = document.createRange();
-                after.setStartAfter(wrapper);
-                after.collapse(true);
                 sel.removeAllRanges();
-                sel.addRange(after);
+                sel.addRange(selected);
             }
         });
     }, [withEditorRange]);
 
     const findBlockElement = useCallback((node: Node | null): HTMLElement | null => {
-        let current: Node | null = node;
-        while (current && current !== editorRef.current) {
-            if (
-                    current instanceof HTMLElement &&
-                    ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI'].includes(current.tagName)
-            ) {
-                return current;
-            }
-            current = current.parentNode;
-        }
-        return null;
+        return editorRef.current ? blockElementOf(node, editorRef.current) : null;
     }, []);
 
+    // The block format of the selection, shown by the toolbar's format selector
+    const [blockFormat, setBlockFormat] = useState<string>(DEFAULT_BLOCK_FORMAT);
+
+    const refreshBlockFormat = useCallback(() => {
+        const root = editorRef.current;
+        if (!root) return;
+        const sel = window.getSelection();
+        const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+        if (range && root.contains(range.commonAncestorContainer)) {
+            setBlockFormat(currentBlockFormat(range, root));
+        }
+    }, []);
+
+    useEffect(() => {
+        if (readOnly || sourceMode) return;
+        document.addEventListener('selectionchange', refreshBlockFormat);
+        return () => document.removeEventListener('selectionchange', refreshBlockFormat);
+    }, [readOnly, refreshBlockFormat, sourceMode]);
+
+    /**
+     * Applies a block format to every block the selection touches (see `applyBlockFormat`); the selection is kept, with boundaries that
+     * pointed at a replaced block moved to its replacement.
+     */
     const replaceBlockTag = useCallback((tagName: string) => {
         withEditorRange((range) => {
-            const block = findBlockElement(range.startContainer) ?? editorRef.current;
-            if (!block || !(block instanceof HTMLElement) || !editorRef.current) return;
-            if (block === editorRef.current) {
-                insertHtmlAtRange(range, `<${tagName}></${tagName}>`);
-                return;
-            }
-            if (block.tagName.toLowerCase() === tagName.toLowerCase()) return;
-
-            const replacement = document.createElement(tagName);
-            replacement.innerHTML = block.innerHTML;
-            block.replaceWith(replacement);
+            const root = editorRef.current;
+            if (!root) return;
+            const boundaries = {
+                start: range.startContainer, startOffset: range.startOffset, end: range.endContainer, endOffset: range.endOffset,
+            };
+            const replaced = applyBlockFormat(range, tagName, root);
 
             const sel = window.getSelection();
-            if (sel) {
-                const caret = document.createRange();
-                caret.selectNodeContents(replacement);
-                caret.collapse(false);
+            const start = replaced.get(boundaries.start) ?? boundaries.start;
+            const end = replaced.get(boundaries.end) ?? boundaries.end;
+            if (sel && start.isConnected && end.isConnected) {
+                const kept = document.createRange();
+                kept.setStart(start, Math.min(boundaries.startOffset, lengthOf(start)));
+                kept.setEnd(end, Math.min(boundaries.endOffset, lengthOf(end)));
                 sel.removeAllRanges();
-                sel.addRange(caret);
+                sel.addRange(kept);
             }
+            setBlockFormat(currentBlockFormat(sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null, root));
         });
-    }, [findBlockElement, insertHtmlAtRange, withEditorRange]);
+    }, [withEditorRange]);
 
     const toggleList = useCallback((listTag: 'ol' | 'ul') => {
         withEditorRange((range) => {
@@ -840,7 +869,7 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                                 {/* Format block selector */}
                                 <Select
                                         size="small"
-                                        defaultValue="p"
+                                        value={blockFormat}
                                         style={{width: 90}}
                                         options={headingOptions}
                                         onChange={(v) => insertHeading(v)}
@@ -1026,6 +1055,8 @@ export function RichTextEditor({value, onChange, onEmbedsChange, readOnly = fals
                                         style={editorStyle}
                                         onInput={readOnly ? undefined : handleEditorInput}
                                         onBlur={readOnly ? undefined : handleEditorInput}
+                                        onMouseUp={readOnly ? undefined : refreshBlockFormat}
+                                        onKeyUp={readOnly ? undefined : refreshBlockFormat}
                                         onClick={readOnly ? undefined : handleEditorClick}
                                 />
                         )}
